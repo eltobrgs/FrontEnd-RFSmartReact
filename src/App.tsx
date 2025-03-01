@@ -7,6 +7,8 @@ import { CreateProductPage } from './pages/products/CreateProductPage';
 import { SelectProductTypePage } from './pages/products/SelectProductTypePage';
 import { SelectMembershipTypePage } from './pages/products/SelectMembershipTypePage';
 import { MembershipSetupPage } from './pages/products/MembershipSetupPage';
+import { MemberProductsPage } from './pages/member/MemberProductsPage';
+import { BuyProductsPage } from './pages/member/BuyProductsPage';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
           <Route path="/products/create/type" element={<SelectProductTypePage />} />
           <Route path="/products/create/membership" element={<SelectMembershipTypePage />} />
           <Route path="/products/create/membership/setup" element={<MembershipSetupPage />} />
+          <Route path="/member/products" element={<MemberProductsPage />} />
+          <Route path="/member/buy-products" element={<BuyProductsPage />} />
         </Routes>
       </div>
     </BrowserRouter>

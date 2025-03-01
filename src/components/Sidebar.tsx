@@ -1,10 +1,21 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Determine role based on URL path
+  const isMemberRoute = location.pathname.startsWith('/member');
+  const [selectedRole, setSelectedRole] = useState(isMemberRoute ? 'member' : 'producer');
+
+  // Update role when route changes
+  useEffect(() => {
+    const newRole = location.pathname.startsWith('/member') ? 'member' : 'producer';
+    setSelectedRole(newRole);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -18,7 +29,17 @@ export function Sidebar() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const menuItems = [
+  const handleRoleChange = (role: string) => {
+    setSelectedRole(role);
+    // Navigate to the appropriate section based on role
+    if (role === 'member') {
+      navigate('/member/products');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  const producerMenuItems = [
     { icon: '🎯', label: 'Dashboard', path: '/dashboard' },
     { icon: '📦', label: 'Produtos', path: '/products' },
     { icon: '💰', label: 'Vendas', path: '/sales' },
@@ -31,6 +52,14 @@ export function Sidebar() {
     { icon: '👥', label: 'Coprodutores', path: '/coproducers' },
     { icon: '👥', label: 'Colaboradores', path: '/collaborators' },
   ];
+
+  const memberMenuItems = [
+    { icon: '📦', label: 'Meus Produtos', path: '/member/products' },
+    { icon: '🛍️', label: 'Comprar Produtos', path: '/member/buy-products' },
+    { icon: '👤', label: 'Minha conta', path: '/member/account' },
+  ];
+
+  const menuItems = selectedRole === 'producer' ? producerMenuItems : memberMenuItems;
 
   return (
     <>
@@ -80,49 +109,42 @@ export function Sidebar() {
               <div className="p-6 border-b">
                 <img
                   src="/src/assets/logo.svg"
-                  alt="LastLink"
+                  alt="Logo"
                   className="h-8"
                 />
               </div>
 
-              {/* User section */}
-              <div className="p-6 border-b">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium">
-                    B
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">borges</h3>
-                    <span className="text-sm text-gray-500">Starter</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation */}
-              <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-                {menuItems.map((item) => (
-                  <Link
-                    key={item.label}
-                    to={item.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === item.path ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    <span className="text-xl">{item.icon}</span>
-                    <span className="font-medium">{item.label}</span>
-                  </Link>
-                ))}
-              </nav>
-
-              {/* Bottom section */}
-              <div className="p-4 border-t">
-                <Link
-                  to="/help"
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+              {/* Role selector */}
+              <div className="p-4 border-b">
+                <select
+                  value={selectedRole}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  className="w-full p-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 >
-                  <span className="text-xl">❓</span>
-                  <span className="font-medium">Ajuda</span>
-                </Link>
+                  <option value="producer">Produtor</option>
+                  <option value="member">Membro</option>
+                </select>
               </div>
+
+              {/* Menu items */}
+              <nav className="flex-1 overflow-y-auto py-4">
+                <ul className="space-y-1">
+                  {menuItems.map((item) => (
+                    <li key={item.path}>
+                      <Link
+                        to={item.path}
+                        className={`flex items-center gap-4 px-8 py-4 text-base font-medium transition-colors ${location.pathname === item.path
+                          ? 'text-green-500 bg-green-50'
+                          : 'text-gray-600 hover:text-green-500 hover:bg-green-50'
+                          }`}
+                      >
+                        <span className="text-xl">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             </motion.div>
           </>
         )}
