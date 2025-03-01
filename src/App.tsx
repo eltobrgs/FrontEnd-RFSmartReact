@@ -9,6 +9,7 @@ import { SelectMembershipTypePage } from './pages/products/SelectMembershipTypeP
 import { MembershipSetupPage } from './pages/products/MembershipSetupPage';
 import { MemberProductsPage } from './pages/member/MemberProductsPage';
 import { BuyProductsPage } from './pages/member/BuyProductsPage';
+import { MemberContentPage } from './pages/member/MemberContentPage';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/products/create/membership/setup" element={<MembershipSetupPage />} />
           <Route path="/member/products" element={<MemberProductsPage />} />
           <Route path="/member/buy-products" element={<BuyProductsPage />} />
+          <Route path="/member/products/:productId/content" element={<MemberContentPage />} />
         </Routes>
       </div>
     </BrowserRouter>
