@@ -1,55 +1,115 @@
-# React + TypeScript + Vite
+# Frontend RFSmart React
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicação web moderna construída com React, TypeScript e Vite, projetada para fornecer uma interface robusta e amigável para a plataforma RFSmart.
 
-Currently, two official plugins are available:
+## Stack Tecnológica
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 19** - Biblioteca JavaScript para construção de interfaces de usuário
+- **TypeScript** - Adiciona tipagem estática ao JavaScript
+- **Vite** - Ferramenta de nova geração para frontend
+- **TailwindCSS** - Framework CSS utilitário
+- **React Router DOM** - Biblioteca de roteamento para React
+- **Framer Motion** - Biblioteca de animação para React
 
-## Expanding the ESLint configuration
+## Começando
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Pré-requisitos
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+- Node.js (versão LTS recomendada)
+- Gerenciador de pacotes npm ou yarn
+
+### Instalação
+
+1. Clone o repositório
+2. Instale as dependências:
+   ```bash
+   npm install
+   # ou
+   yarn install
+   #ou
+   bun install
+   ```
+
+### Desenvolvimento
+
+Inicie o servidor de desenvolvimento:
+
+```bash
+ npm run dev
+ # ou
+ yarn dev
+ #ou
+ bun run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+A aplicação estará disponível em `http://localhost:5173`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Compilação para Produção
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+npm run build
+# ou
+yarn build
+#ou
+bun run build
 ```
-# RFSmartReact
+
+## Estrutura do Projeto
+
+```
+src/
+  ├── assets/      # Recursos estáticos
+  ├── components/  # Componentes UI reutilizáveis
+  ├── pages/       # Páginas/rotas da aplicação
+  ├── App.tsx      # Componente principal da aplicação
+  └── main.tsx     # Ponto de entrada da aplicação
+```
+
+## Diretrizes de Desenvolvimento
+
+### Estilo de Código
+
+- O projeto utiliza ESLint para linting de código
+- Modo estrito do TypeScript está ativado
+- Siga as melhores práticas e diretrizes de hooks do React
+
+### Verificação de Tipos
+
+Execute a verificação de tipos:
+
+```bash
+tsc -b
+```
+
+### Linting
+
+Execute o ESLint:
+
+```bash
+npm run lint
+# ou
+yarn lint
+#ou
+bun run lint
+```
+
+## Dependências
+
+### Principais
+
+- react: ^19.0.0
+- react-dom: ^19.0.0
+- react-router-dom: ^7.2.0
+- framer-motion: ^12.4.7
+- tailwindcss: ^4.0.9
+
+### Desenvolvimento
+
+- typescript: ~5.7.2
+- vite: ^6.2.0
+- eslint: ^9.21.0
+- @vitejs/plugin-react: ^4.3.4
+
+## Licença
+
+Este projeto é privado e confidencial. Todos os direitos reservados.
