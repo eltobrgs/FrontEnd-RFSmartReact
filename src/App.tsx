@@ -10,6 +10,8 @@ import { MembershipSetupPage } from './pages/products/MembershipSetupPage';
 import { MemberProductsPage } from './pages/member/MemberProductsPage';
 import { BuyProductsPage } from './pages/member/BuyProductsPage';
 import { MemberContentPage } from './pages/member/MemberContentPage';
+import { ModuleLessonsPage } from './pages/member/ModuleLessonsPage';
+
 
 function App() {
   return (
@@ -26,6 +28,7 @@ function App() {
           <Route path="/member/products" element={<MemberProductsPage />} />
           <Route path="/member/buy-products" element={<BuyProductsPage />} />
           <Route path="/member/products/:productId/content" element={<MemberContentPage />} />
+          <Route path="/member/products/:productId/modules/:moduleId" element={<ModuleLessonsPage />} />
         </Routes>
       </div>
     </BrowserRouter>
