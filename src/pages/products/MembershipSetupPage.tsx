@@ -4,6 +4,7 @@ import { FiArrowLeft } from 'react-icons/fi';
 import { useState } from 'react';
 import { CreatePostModal } from '../../components/CreatePostModal';
 import { CourseCreateSectionModal } from '../../components/CourseCreateSectionModal';
+import { PrivateChannelModal } from '../../components/PrivateChannelModal';
 
 export function MembershipSetupPage() {
   const [activeTab, setActiveTab] = useState('community');
@@ -11,6 +12,8 @@ export function MembershipSetupPage() {
   const [channelTabText, setChannelTabText] = useState('+Incluir canal privado');
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [isCreateSectionModalOpen, setIsCreateSectionModalOpen] = useState(false);
+  const [isPrivateChannelModalOpen, setIsPrivateChannelModalOpen] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<'telegram' | 'whatsapp' | 'youtube'>('telegram');
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-gray-100">
       {/* Header Section */}
@@ -199,9 +202,9 @@ export function MembershipSetupPage() {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">Criar seção</h3>
+              <h3 className="text-lg font-medium text-white mb-2">Criar Modulo</h3>
               <p className="text-gray-400 mb-6">
-                Organize seus cursos em seções
+                Organize seus cursos em Modulos
               </p>
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -209,8 +212,7 @@ export function MembershipSetupPage() {
                 onClick={() => setIsCreateSectionModalOpen(true)}
                 className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
               >
-                Criar seção
-              </motion.button>
+                Criar Modulo              </motion.button>
               <CourseCreateSectionModal
                 isOpen={isCreateSectionModalOpen}
                 onClose={() => setIsCreateSectionModalOpen(false)}
@@ -236,6 +238,10 @@ export function MembershipSetupPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
+                onClick={() => {
+                  setSelectedPlatform('telegram');
+                  setIsPrivateChannelModalOpen(true);
+                }}
               >
                 Conectar
               </motion.button>
@@ -258,6 +264,10 @@ export function MembershipSetupPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
+                onClick={() => {
+                  setSelectedPlatform('whatsapp');
+                  setIsPrivateChannelModalOpen(true);
+                }}
               >
                 Conectar
               </motion.button>
@@ -280,12 +290,23 @@ export function MembershipSetupPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
+                onClick={() => {
+                  setSelectedPlatform('youtube');
+                  setIsPrivateChannelModalOpen(true);
+                }}
               >
                 Conectar
               </motion.button>
             </div>
           </div>
         )}
+        
+        {/* Private Channel Modal */}
+        <PrivateChannelModal
+          isOpen={isPrivateChannelModalOpen}
+          onClose={() => setIsPrivateChannelModalOpen(false)}
+          platform={selectedPlatform}
+        />
       </div>
     </div>
   );

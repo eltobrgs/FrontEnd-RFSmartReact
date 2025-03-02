@@ -8,7 +8,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Icons
-import { FiPlay, FiInfo, FiArrowLeft, FiClock, FiBook, FiUser, FiStar } from 'react-icons/fi';
+import { FiPlay, FiInfo, FiArrowLeft, FiClock, FiBook, FiUser, FiStar, FiMessageSquare, FiHeart, FiShare2, FiX } from 'react-icons/fi';
+import { FaTelegram, FaWhatsapp, FaYoutube } from 'react-icons/fa';
 
 interface Lesson {
   id: number;
@@ -29,6 +30,35 @@ interface Module {
   progress?: number;
 }
 
+interface PrivateGroup {
+  id: number;
+  name: string;
+  description: string;
+  type: 'telegram' | 'whatsapp' | 'youtube';
+  memberCount: number;
+  lastActivity: string;
+  isLocked: boolean;
+  previewImage?: string;
+}
+
+interface Post {
+  id: number;
+  title: string;
+  description: string;
+  space: string;
+  tags: string[];
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video' | 'audio';
+  attachments?: string[];
+  author: {
+    name: string;
+    avatar: string;
+  };
+  createdAt: string;
+  likes: number;
+  comments: number;
+}
+
 // Mock course details
 const courseDetails = {
   duration: '12 horas',
@@ -40,6 +70,72 @@ const courseDetails = {
   certificate: true,
   level: 'Intermediário'
 };
+
+// Mock private groups data
+const mockPrivateGroups: PrivateGroup[] = [
+  {
+    id: 1,
+    name: 'Canal VIP de Marketing',
+    description: 'Conteúdo exclusivo e atualizações diárias sobre marketing digital',
+    type: 'telegram',
+    memberCount: 256,
+    lastActivity: '2024-01-20T10:00:00Z',
+    isLocked: false
+  },
+  {
+    id: 2,
+    name: 'Grupo de Networking',
+    description: 'Conecte-se com outros profissionais e compartilhe experiências',
+    type: 'whatsapp',
+    memberCount: 128,
+    lastActivity: '2024-01-19T15:30:00Z',
+    isLocked: true
+  },
+  {
+    id: 3,
+    name: 'Lives Exclusivas',
+    description: 'Canal privado com lives e conteúdos exclusivos',
+    type: 'youtube',
+    memberCount: 512,
+    lastActivity: '2024-01-18T20:00:00Z',
+    isLocked: false,
+    previewImage: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800'
+  }
+];
+
+// Mock posts data
+const mockPosts: Post[] = [
+  {
+    id: 1,
+    title: 'Novidades sobre SEO em 2024',
+    description: 'Confira as principais tendências de SEO para este ano e como aplicá-las em suas estratégias de marketing digital.',
+    space: 'general',
+    tags: ['SEO', 'Marketing Digital', 'Tendências'],
+    mediaUrl: 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=800',
+    mediaType: 'image',
+    author: {
+      name: 'Maria Silva',
+      avatar: 'https://ui-avatars.com/api/?name=Maria+Silva'
+    },
+    createdAt: '2024-01-15T10:00:00Z',
+    likes: 45,
+    comments: 12
+  },
+  {
+    id: 2,
+    title: 'Anúncio: Nova Aula sobre Google Analytics 4',
+    description: 'Acabamos de adicionar uma nova aula sobre GA4 no módulo de Analytics. Aprenda a utilizar as novas funcionalidades e métricas.',
+    space: 'announcements',
+    tags: ['Google Analytics', 'Novidades', 'Análise de Dados'],
+    author: {
+      name: 'João Santos',
+      avatar: 'https://ui-avatars.com/api/?name=Joao+Santos'
+    },
+    createdAt: '2024-01-14T15:30:00Z',
+    likes: 32,
+    comments: 8
+  }
+];
 
 // Mock data
 const mockModules: Module[] = [
@@ -103,6 +199,7 @@ export function MemberContentPage() {
   useParams();
   const navigate = useNavigate();
   const [showInfo, setShowInfo] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const { productId } = useParams();
 
@@ -247,8 +344,9 @@ export function MemberContentPage() {
 
       {/* Modules Grid */}
       <div className="px-8 pb-16 mt-16 relative z-10">
+        {/* Modules Section */}
         <h2 className="text-2xl font-medium mb-8">Módulos do Curso</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
           {mockModules.map((module) => (
             <motion.div
               key={module.id}
@@ -292,6 +390,210 @@ export function MemberContentPage() {
               </div>
             </motion.div>
           ))}
+        </div>
+
+        {/* Community Feed Section */}
+        <div>
+          <h2 className="text-2xl font-medium mb-8">Comunidade</h2>
+          <div className="space-y-6">
+            {mockPosts.map((post) => (
+              <div 
+                key={post.id} 
+                className="bg-gray-800 rounded-lg p-6 space-y-4 cursor-pointer hover:bg-gray-700/50 transition-colors"
+                onClick={() => setSelectedPost(post)}
+              >
+                <div className="flex items-center gap-4">
+                  <img
+                    src={post.author.avatar}
+                    alt={post.author.name}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <div>
+                    <h3 className="font-medium text-white">{post.author.name}</h3>
+                    <p className="text-sm text-gray-400">{new Date(post.createdAt).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xl font-medium mb-2">{post.title}</h4>
+                  <p className="text-gray-300">{post.description}</p>
+                </div>
+
+                {post.mediaUrl && post.mediaType === 'image' && (
+                  <img
+                    src={post.mediaUrl}
+                    alt={post.title}
+                    className="w-full h-64 object-cover rounded-lg"
+                  />
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  {post.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-300"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-6 pt-4 border-t border-gray-700">
+                  <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                    <FiHeart className="w-5 h-5" />
+                    <span>{post.likes}</span>
+                  </button>
+                  <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                    <FiMessageSquare className="w-5 h-5" />
+                    <span>{post.comments}</span>
+                  </button>
+                  <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                    <FiShare2 className="w-5 h-5" />
+                    <span>Compartilhar</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Post Modal */}
+        <AnimatePresence>
+          {selectedPost && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black cursor-pointer z-40"
+                onClick={() => setSelectedPost(null)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="fixed inset-8 bg-gray-800 rounded-xl shadow-xl overflow-hidden z-50 flex flex-col"
+              >
+                <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+                  <h2 className="text-xl font-medium text-white">{selectedPost.title}</h2>
+                  <button
+                    onClick={() => setSelectedPost(null)}
+                    className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={selectedPost.author.avatar}
+                      alt={selectedPost.author.name}
+                      className="w-10 h-10 rounded-full"
+                    />
+                    <div>
+                      <h3 className="font-medium text-white">{selectedPost.author.name}</h3>
+                      <p className="text-sm text-gray-400">
+                        {new Date(selectedPost.createdAt).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-300 text-lg">{selectedPost.description}</p>
+
+                  {selectedPost.mediaUrl && selectedPost.mediaType === 'image' && (
+                    <img
+                      src={selectedPost.mediaUrl}
+                      alt={selectedPost.title}
+                      className="w-full rounded-lg"
+                    />
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPost.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-300"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-6 pt-4 border-t border-gray-700">
+                    <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                      <FiHeart className="w-5 h-5" />
+                      <span>{selectedPost.likes}</span>
+                    </button>
+                    <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                      <FiMessageSquare className="w-5 h-5" />
+                      <span>{selectedPost.comments}</span>
+                    </button>
+                    <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                      <FiShare2 className="w-5 h-5" />
+                      <span>Compartilhar</span>
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Private Groups and Channels Section */}
+        <div className="mt-16">
+          <h2 className="text-2xl font-medium mb-8">Grupos e Canais Privados</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mockPrivateGroups.map((group) => (
+              <motion.div
+                key={group.id}
+                whileHover={{ scale: 1.02 }}
+                className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer"
+              >
+                {group.previewImage ? (
+                  <div className="aspect-video relative">
+                    <img
+                      src={group.previewImage}
+                      alt={group.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {group.isLocked && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span className="text-white bg-gray-900/80 px-3 py-1 rounded-full text-sm">
+                          Acesso Bloqueado
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-gray-700 flex items-center justify-center">
+                    {group.type === 'telegram' && (
+                      <FaTelegram className="w-12 h-12 text-gray-500" />
+                    )}
+                    {group.type === 'whatsapp' && (
+                      <FaWhatsapp className="w-12 h-12 text-gray-500" />
+                    )}
+                    {group.type === 'youtube' && (
+                      <FaYoutube className="w-12 h-12 text-gray-500" />
+                    )}
+                  </div>
+                )}
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-lg text-white">{group.name}</h3>
+                    <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded-full">
+                      {group.type.charAt(0).toUpperCase() + group.type.slice(1)}
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-sm mb-4">{group.description}</p>
+                  <div className="flex items-center justify-between text-sm text-gray-400">
+                    <span>{group.memberCount} membros</span>
+                    <span>Ativo {new Date(group.lastActivity).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
