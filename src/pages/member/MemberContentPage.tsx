@@ -142,7 +142,10 @@ export function MemberContentPage() {
   }, [productId, navigate]);
 
   const handleModuleClick = (moduleId: string) => {
-    navigate(`/member/products/${productId}/modules/${moduleId}`);
+    const targetPath = `/member/products/${productId}/modules/${moduleId}`;
+    if (window.location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
   };
 
   const handleLikePost = async (postId: string) => {

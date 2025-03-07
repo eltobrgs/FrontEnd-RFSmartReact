@@ -41,7 +41,7 @@ export function DashboardPage() {
             <select
               value={selectedWallet}
               onChange={(e) => setSelectedWallet(e.target.value)}
-              className="p-2 border rounded-lg w-64 bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+              className="p-2 border rounded-lg w-64 bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900"
             >
               <option>Todas as carteiras</option>
             </select>
@@ -121,7 +121,7 @@ export function DashboardPage() {
             <h2 className="text-xl font-medium text-gray-800">Minhas vendas</h2>
             <div className="flex items-center gap-4">
               <select
-                className="p-2 border rounded-lg"
+                className="p-2 border rounded-lg text-gray-900"
                 defaultValue="4"
               >
                 <option value="4">Todos os produtos</option>

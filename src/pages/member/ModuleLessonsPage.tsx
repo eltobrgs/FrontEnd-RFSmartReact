@@ -44,7 +44,7 @@ export function ModuleLessonsPage() {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [expandedLessons, setExpandedLessons] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
-  const [, setLessonLoading] = useState(false);
+  const [lessonLoading, setLessonLoading] = useState(false);
   const [error, setError] = useState('');
   const [progressUpdateLoading, setProgressUpdateLoading] = useState(false);
   const videoRef = useRef<HTMLIFrameElement>(null);
@@ -92,7 +92,6 @@ export function ModuleLessonsPage() {
     };
     
     fetchModuleData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moduleId]);
 
   // Buscar dados da lição
@@ -256,6 +255,14 @@ export function ModuleLessonsPage() {
     return url;
   };
 
+  // Para o botão de voltar:
+  const handleBackClick = () => {
+    const targetPath = `/member/products/${productId}/content`;
+    if (window.location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
@@ -272,7 +279,7 @@ export function ModuleLessonsPage() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => navigate(`/member/products/${productId}/content`)}
+          onClick={handleBackClick}
           className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
         >
           Voltar para o Produto
@@ -289,7 +296,7 @@ export function ModuleLessonsPage() {
               <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={() => navigate(`/member/products/${productId}/content`)}
+            onClick={handleBackClick}
             className="p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
               >
                 <FiArrowLeft className="w-5 h-5" />

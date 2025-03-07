@@ -179,7 +179,7 @@ export function CreateProductPage() {
                       name="name"
                       value={productData.name}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
                       placeholder="Ex: Curso de Marketing Digital"
                       required
                     />
@@ -195,7 +195,7 @@ export function CreateProductPage() {
                       value={productData.description}
                       onChange={handleInputChange}
                       rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
                       placeholder="Descreva seu produto em detalhes"
                       required
                     />
@@ -214,7 +214,7 @@ export function CreateProductPage() {
                         onChange={handleInputChange}
                         min="0"
                         step="0.01"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
                         placeholder="99.90"
                         required
                       />
@@ -229,7 +229,7 @@ export function CreateProductPage() {
                         name="category"
                         value={productData.category}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
                         required
                       >
                         <option value="">Selecione uma categoria</option>
@@ -254,7 +254,7 @@ export function CreateProductPage() {
                       name="image"
                       value={productData.image}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
                       placeholder="https://exemplo.com/imagem.jpg"
                     />
                     <p className="mt-1 text-sm text-gray-500">
@@ -272,7 +272,7 @@ export function CreateProductPage() {
                       name="contactWhatsapp"
                       value={productData.contactWhatsapp}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
                       placeholder="Ex: https://wa.me/5511999999999"
                       required
                     />

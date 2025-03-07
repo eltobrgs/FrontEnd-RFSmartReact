@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
 
@@ -6,14 +6,26 @@ interface AddLessonModalProps {
   isOpen: boolean;
   onClose: () => void;
   moduleTitle: string;
-  onSubmit?: (lessonData: { title: string; description: string; videoUrl: string }) => void;
+  onSubmit?: (lessonData: { title: string; description: string; videoUrl: string; materialUrl?: string }) => void;
 }
 
 export function AddLessonModal({ isOpen, onClose, moduleTitle, onSubmit }: AddLessonModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [materialUrl, setMaterialUrl] = useState('');
   const [error, setError] = useState('');
+
+  // Limpar o formulário quando o modal é aberto
+  useEffect(() => {
+    if (isOpen) {
+      setTitle('');
+      setDescription('');
+      setVideoUrl('');
+      setMaterialUrl('');
+      setError('');
+    }
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,21 +35,18 @@ export function AddLessonModal({ isOpen, onClose, moduleTitle, onSubmit }: AddLe
       return;
     }
     
+    console.log('Enviando dados da aula:', { title, description, videoUrl, materialUrl });
+    
     if (onSubmit) {
       onSubmit({
         title,
         description,
-        videoUrl
+        videoUrl,
+        materialUrl
       });
     }
     
-    // Limpar o formulário
-    setTitle('');
-    setDescription('');
-    setVideoUrl('');
-    setError('');
-    
-    onClose();
+    // Não limpar o formulário aqui, pois o onClose já vai limpar
   };
 
   return (
@@ -119,6 +128,20 @@ export function AddLessonModal({ isOpen, onClose, moduleTitle, onSubmit }: AddLe
                     onChange={(e) => setVideoUrl(e.target.value)}
                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
                     placeholder="Ex: https://www.youtube.com/watch?v=..."
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="materialUrl" className="block text-sm font-medium text-gray-300 mb-1">
+                    URL do Material de Apoio
+                  </label>
+                  <input
+                    type="url"
+                    id="materialUrl"
+                    value={materialUrl}
+                    onChange={(e) => setMaterialUrl(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
+                    placeholder="Ex: https://drive.google.com/file/..."
                   />
                 </div>
                 

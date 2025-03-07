@@ -73,7 +73,7 @@ interface Lesson {
 }
 
 interface Module {
-  id: number;
+  id: string;
   title: string;
   description: string;
   icon: string;
@@ -171,6 +171,9 @@ export function MembershipSetupPage() {
   const [users, setUsers] = useState<User[]>(mockUsers);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
 
+  // Estados para controle do módulo selecionado e modal
+  const [mockModules, setMockModules] = useState<Module[]>([]);
+
   // Buscar dados do produto
   useEffect(() => {
     const fetchProductData = async () => {
@@ -183,11 +186,11 @@ export function MembershipSetupPage() {
             'Authorization': `Bearer ${token}`
           }
         });
-
+        
         if (!response.ok) {
-          throw new Error('Falha ao carregar dados do produto');
+          throw new Error('Falha ao carregar detalhes do produto');
         }
-
+        
         const data = await response.json();
         setProduct(data);
         
@@ -200,7 +203,21 @@ export function MembershipSetupPage() {
         
         if (modulesResponse.ok) {
           const modulesData = await modulesResponse.json();
-          setMockModules(modulesData);
+          console.log('Módulos carregados do backend:', modulesData);
+          
+          // Formatar os módulos para o formato esperado
+          const formattedModules = modulesData.map((module: any) => ({
+            id: module.id.toString(), // Garantir que o ID seja string
+            title: module.title,
+            description: module.description,
+            icon: 'default',
+            lessonsCount: module.lessons?.length || 0,
+            createdAt: new Date(module.createdAt).toLocaleDateString('pt-BR'),
+            lessons: module.lessons || []
+          }));
+          
+          console.log('Módulos formatados:', formattedModules);
+          setMockModules(formattedModules);
         }
         
         // Buscar posts do produto
@@ -212,15 +229,19 @@ export function MembershipSetupPage() {
         
         if (postsResponse.ok) {
           const postsData = await postsResponse.json();
-          setMockPosts(postsData.map((post: ApiPost) => ({
+          
+          // Formatar os posts para o formato esperado
+          const formattedPosts = postsData.map((post: ApiPost) => ({
             id: post.id,
             title: post.title,
             description: post.description,
+            space: post.space,
             date: new Date(post.createdAt).toLocaleDateString('pt-BR'),
             comments: post._count?.comments || 0,
-            likes: post.likes || 0,
-            space: post.space || 'Geral'
-          })));
+            likes: post.likes || 0
+          }));
+          
+          setMockPosts(formattedPosts);
         }
         
         // Buscar grupos privados do produto
@@ -232,23 +253,33 @@ export function MembershipSetupPage() {
         
         if (groupsResponse.ok) {
           const groupsData = await groupsResponse.json();
-          setMockGroups(groupsData.map((group: ApiGroup) => ({
-            id: group.id,
-            name: group.name,
-            type: 'group',
-            membersCount: group.memberCount || 0,
-            createdAt: new Date(group.createdAt).toLocaleDateString('pt-BR')
-          })));
           
-          setMockChannels(groupsData.filter((group: ApiGroup) => group.type === 'TELEGRAM' || group.type === 'WHATSAPP' || group.type === 'YOUTUBE')
-            .map((channel: ApiGroup) => ({
-              id: channel.id,
-              name: channel.name,
-              platform: channel.type.toLowerCase() as 'telegram' | 'whatsapp' | 'youtube',
-              membersCount: channel.memberCount || 0,
-              isConnected: !channel.isLocked,
-              createdAt: new Date(channel.createdAt).toLocaleDateString('pt-BR')
-            })));
+          // Formatar os grupos para o formato esperado
+          const formattedGroups = groupsData
+            .filter((group: ApiGroup) => group.type !== 'TELEGRAM' && group.type !== 'WHATSAPP' && group.type !== 'YOUTUBE')
+            .map((group: ApiGroup) => ({
+              id: group.id,
+              name: group.name,
+              type: 'group',
+              membersCount: group.memberCount || 0,
+              createdAt: new Date(group.createdAt).toLocaleDateString('pt-BR')
+            }));
+          
+          setMockGroups(formattedGroups);
+          
+          // Formatar os canais para o formato esperado
+          const formattedChannels = groupsData
+            .filter((group: ApiGroup) => group.type === 'TELEGRAM' || group.type === 'WHATSAPP' || group.type === 'YOUTUBE')
+            .map((group: ApiGroup) => ({
+              id: group.id,
+              name: group.name,
+              platform: group.type.toLowerCase() as 'telegram' | 'whatsapp' | 'youtube',
+              membersCount: group.memberCount || 0,
+              isConnected: !group.isLocked,
+              createdAt: new Date(group.createdAt).toLocaleDateString('pt-BR')
+            }));
+          
+          setMockChannels(formattedChannels);
         }
         
         // Buscar usuários com acesso ao produto
@@ -260,37 +291,32 @@ export function MembershipSetupPage() {
         
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
-          setUsers(usersData.map((user: ApiUser) => ({
+          
+          // Formatar os usuários para o formato esperado
+          const formattedUsers = usersData.map((user: ApiUser) => ({
             id: user.id,
             name: user.name,
             email: user.email,
-            avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`,
-            status: user.status || 'active',
+            avatar: user.avatar,
+            status: user.status.toLowerCase() as 'pending' | 'active' | 'inactive',
             lastAccess: user.lastAccessed ? new Date(user.lastAccessed).toLocaleDateString('pt-BR') : undefined
-          })));
-        }
-        
-        // Ajustar as abas com base no tipo de produto
-        if (data.accessType === 'COURSE') {
-          setActiveTab('courses');
-          setCoursesTabText('Cursos');
-        } else if (data.accessType === 'COMMUNITY') {
-          setActiveTab('community');
-          setCoursesTabText('+Incluir área de cursos');
-        } else if (data.accessType === 'BOTH') {
-          setActiveTab('community');
-          setCoursesTabText('Cursos');
+          }));
+          
+          // Não estamos mais usando mockUsers
+          // setUsers(formattedUsers);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar dados do produto');
-        console.error('Erro:', err);
+        setError(err instanceof Error ? err.message : 'Erro ao carregar detalhes do produto');
+        console.error('Erro ao buscar detalhes do produto:', err);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchProductData();
-  }, [productId, navigate]);
+    
+    if (productId) {
+      fetchProductData();
+    }
+  }, [productId]);
 
   // Função para conceder acesso a um usuário
   const handleGrantAccess = async (userId: number) => {
@@ -413,13 +439,41 @@ export function MembershipSetupPage() {
     }
   };
   
+  // Função para abrir o modal de adicionar aula
+  const handleAddLessonClick = (moduleId: string) => {
+    console.log('Abrindo modal para adicionar aula ao módulo:', moduleId);
+    
+    const foundModule = mockModules.find(m => m.id === moduleId);
+    if (foundModule) {
+      console.log('Módulo encontrado:', foundModule);
+      setSelectedModule(foundModule);
+      setIsAddLessonModalOpen(true);
+    } else {
+      console.error('Módulo não encontrado com ID:', moduleId);
+      alert('Erro: Módulo não encontrado');
+    }
+  };
+
   // Função para adicionar uma aula a um módulo
-  const handleAddLesson = async (lessonData: { title: string; description: string; videoUrl: string }) => {
+  const handleAddLesson = async (lessonData: { title: string; description: string; videoUrl: string; materialUrl?: string }) => {
     try {
-      if (!selectedModule) return;
+      if (!selectedModule) {
+        throw new Error('Nenhum módulo selecionado');
+      }
+      
+      console.log('Tentando adicionar aula ao módulo:', selectedModule);
       
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+      
+      const moduleId = selectedModule.id;
+      
+      console.log('Dados da aula a serem enviados:', {
+        moduleId,
+        ...lessonData
+      });
       
       const response = await fetch(`${API_BASE_URL}/lessons`, {
         method: 'POST',
@@ -428,27 +482,47 @@ export function MembershipSetupPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...lessonData,
-          moduleId: selectedModule.id
+          moduleId,
+          title: lessonData.title,
+          description: lessonData.description,
+          videoUrl: lessonData.videoUrl || '',
+          materialUrl: lessonData.materialUrl || ''
         })
       });
       
       if (!response.ok) {
-        throw new Error('Falha ao adicionar aula');
+        const errorData = await response.text();
+        console.error('Erro da API:', errorData);
+        throw new Error(`Falha ao adicionar aula: ${response.status}`);
       }
       
-      // Atualizar o módulo selecionado
-      setMockModules(mockModules.map(module => 
-        module.id === selectedModule.id 
-          ? { ...module, lessonsCount: module.lessonsCount + 1 }
-          : module
-      ));
+      const newLesson = await response.json();
+      console.log('Nova aula criada:', newLesson);
+      
+      // Atualizar o módulo na lista
+      setMockModules(prevModules => 
+        prevModules.map(module => 
+          module.id === moduleId
+            ? {
+                ...module,
+                lessonsCount: (module.lessonsCount || 0) + 1,
+                lessons: [...(module.lessons || []), newLesson]
+              }
+            : module
+        )
+      );
       
       // Fechar o modal
-      setIsAddLessonModalOpen(false);
+      handleCloseAddLesson();
+      
+      // Atualizar a lista de aulas do módulo
+      await fetchModuleLessons(moduleId);
+      
+      // Mostrar mensagem de sucesso
+      alert('Aula adicionada com sucesso!');
     } catch (err) {
       console.error('Erro ao adicionar aula:', err);
-      // Mostrar mensagem de erro
+      alert(err instanceof Error ? err.message : 'Erro ao adicionar aula');
     }
   };
   
@@ -516,32 +590,44 @@ export function MembershipSetupPage() {
   // Dados mockados para posts
   const [mockPosts, setMockPosts] = useState<Post[]>([]);
 
-  // Dados mockados para módulos
-  const [mockModules, setMockModules] = useState<Module[]>([]);
-
   // Dados mockados para grupos
   const [mockGroups, setMockGroups] = useState<Group[]>([]);
   
   // Dados mockados para canais privados
   const [mockChannels, setMockChannels] = useState<Channel[]>([]);
 
-  // Função para abrir o modal de adicionar aula
-  const handleAddLessonClick = (moduleId: string) => {
-    setSelectedModule(mockModules.find(m => m.id === parseInt(moduleId)) || null);
-    setIsAddLessonModalOpen(true);
-  };
-
   // Função para abrir o modal de informações do módulo
   const handleModuleInfoClick = (moduleId: string) => {
-    setSelectedModule(mockModules.find(m => m.id === parseInt(moduleId)) || null);
-    // Buscar as aulas do módulo selecionado
-    fetchModuleLessons(moduleId);
+    console.log('Abrindo modal de informações para o módulo:', moduleId);
+    
+    const foundModule = mockModules.find(m => m.id === moduleId);
+    if (foundModule) {
+      setSelectedModule(foundModule);
+      setIsAddLessonModalOpen(false); // Garante que o modal de adicionar aula esteja fechado
+      fetchModuleLessons(moduleId);
+    }
+  };
+
+  // Função para fechar o modal de informações
+  const handleCloseModuleInfo = () => {
+    setSelectedModule(null);
+  };
+
+  // Função para fechar o modal de adicionar aula
+  const handleCloseAddLesson = () => {
+    setIsAddLessonModalOpen(false);
+    setSelectedModule(null);
   };
 
   // Função para buscar as aulas de um módulo
   const fetchModuleLessons = async (moduleId: string) => {
     try {
+      console.log('Buscando aulas do módulo:', moduleId);
+      
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
       
       const response = await fetch(`${API_BASE_URL}/modules/${moduleId}`, {
         headers: {
@@ -553,12 +639,35 @@ export function MembershipSetupPage() {
         throw new Error('Falha ao carregar aulas do módulo');
       }
       
-      const data = await response.json();
+      const moduleData = await response.json();
+      console.log('Dados do módulo atualizados:', moduleData);
       
-      // Atualizar o módulo selecionado com as aulas
-      setSelectedModule(data);
+      // Atualizar o módulo na lista
+      setMockModules(prevModules => 
+        prevModules.map(module => 
+          module.id === moduleId
+            ? {
+                ...module,
+                lessons: moduleData.lessons || [],
+                lessonsCount: moduleData.lessons?.length || 0
+              }
+            : module
+        )
+      );
+      
+      // Se este é o módulo selecionado, atualizá-lo também
+      if (selectedModule?.id === moduleId) {
+        setSelectedModule({
+          ...selectedModule,
+          lessons: moduleData.lessons || [],
+          lessonsCount: moduleData.lessons?.length || 0
+        });
+      }
+      
+      return moduleData;
     } catch (err) {
       console.error('Erro ao buscar aulas do módulo:', err);
+      return null;
     }
   };
 
@@ -809,80 +918,96 @@ export function MembershipSetupPage() {
             </div>
 
             {/* Lista de módulos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {mockModules.map((module) => (
                 <div key={module.id} className="bg-white p-4 rounded-lg shadow-sm">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium">{module.title}</h3>
+                    <h3 className="font-medium text-gray-900">{module.title}</h3>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleModuleInfoClick(module.id.toString())}
+                        onClick={() => handleModuleInfoClick(module.id)}
                         className="p-1 text-gray-500 hover:text-gray-700"
                       >
                         <FiInfo className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleAddLessonClick(module.id.toString())}
+                        onClick={() => handleAddLessonClick(module.id)}
                         className="p-1 text-gray-500 hover:text-gray-700"
                       >
                         <FiPlus className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-500">{module.description}</p>
-                  <div className="mt-2 text-xs text-gray-400">
+                  <p className="text-sm text-gray-700">{module.description}</p>
+                  <div className="mt-2 text-xs text-gray-600">
                     {module.lessonsCount} aulas • Criado em {new Date(module.createdAt).toLocaleDateString('pt-BR')}
                   </div>
                 </div>
               ))}
             </div>
 
+            {/* Modais */}
             <CourseCreateSectionModal
               isOpen={isCreateSectionModalOpen}
               onClose={() => setIsCreateSectionModalOpen(false)}
-                  onSubmit={handleCreateModule}
+              onSubmit={handleCreateModule}
             />
 
+            {/* Modal de Adicionar Aula */}
             <AddLessonModal
               isOpen={isAddLessonModalOpen}
-              onClose={() => setIsAddLessonModalOpen(false)}
-              onSubmit={handleAddLesson}
+              onClose={handleCloseAddLesson}
               moduleTitle={selectedModule?.title || ''}
+              onSubmit={(lessonData) => {
+                console.log('Dados da aula recebidos do modal:', lessonData);
+                console.log('Módulo selecionado ao enviar:', selectedModule);
+                handleAddLesson(lessonData);
+              }}
             />
             
-            {selectedModule && (
+            {/* Modal de Informações do Módulo */}
+            {selectedModule && !isAddLessonModalOpen && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg w-full max-w-md p-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-medium">{selectedModule.title}</h2>
+                    <h2 className="text-xl font-medium text-gray-900">
+                      Módulo: {selectedModule.title}
+                    </h2>
                     <button
-                      onClick={() => setSelectedModule(null)}
+                      onClick={handleCloseModuleInfo}
                       className="text-gray-500 hover:text-gray-700"
                     >
                       <FiX className="w-5 h-5" />
                     </button>
                   </div>
-                  <p className="text-gray-600 mb-4">{selectedModule.description}</p>
+                  <p className="text-gray-700 mb-4">{selectedModule.description}</p>
                   
                   <div className="mb-4">
-                    <h3 className="font-medium mb-2">Aulas</h3>
+                    <h3 className="font-medium mb-2 text-gray-900">Aulas</h3>
                     {selectedModule.lessons && selectedModule.lessons.length > 0 ? (
                       <div className="space-y-2">
                         {selectedModule.lessons.map((lesson) => (
                           <div key={lesson.id} className="p-2 bg-gray-50 rounded">
-                            <div className="font-medium">{lesson.title}</div>
-                            <div className="text-sm text-gray-500">{lesson.description}</div>
+                            <div className="font-medium text-gray-900">{lesson.title}</div>
+                            <div className="text-sm text-gray-700">{lesson.description}</div>
+                            {lesson.videoUrl && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                <a href={lesson.videoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                  Link do vídeo
+                                </a>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-500">Nenhuma aula cadastrada neste módulo.</p>
+                      <p className="text-gray-700">Nenhuma aula cadastrada neste módulo.</p>
                     )}
                   </div>
                   
                   <div className="flex justify-end">
                     <button
-                      onClick={() => setSelectedModule(null)}
+                      onClick={handleCloseModuleInfo}
                       className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
                     >
                       Fechar
@@ -900,7 +1025,7 @@ export function MembershipSetupPage() {
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
                     <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.692-1.653-1.123-2.678-1.799-1.185-.781-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.056-.056-.212s-.041-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.241-1.865-.44-.751-.244-1.349-.374-1.297-.789.027-.216.324-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.015 3.333-1.386 4.025-1.627 4.477-1.635.099-.002.321.023.465.141.119.098.152.228.166.331.016.122.033.391.019.591z"/>
+                          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.697.064-1.226-.461-1.901-.903-1.056-.692-1.653-1.123-2.678-1.799-1.185-.781-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.056-.056-.212s-.041-.041-.249-.024c-.106.024-1.793 1.139-5.062 3.345-.479.329-.913.489-1.302.481-.428-.009-1.252-.241-1.865-.44-.751-.244-1.349-.374-1.297-.789.027-.216.324-.437.893-.663 3.498-1.524 5.831-2.529 6.998-3.015 3.333-1.386 4.025-1.627 4.477-1.635.099-.002.321.023.465.141.119.098.098.152.228.166.331.016.122.033.391.019.591z"/>
                     </svg>
                   </div>
                   <div>
@@ -934,7 +1059,7 @@ export function MembershipSetupPage() {
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
                     <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 1.856.001 3.598.723 4.907 2.034 1.31 1.311 2.031 3.054 2.03 4.908-.001 3.825-3.113 6.938-6.937 6.938z"/>
+                          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-.087-.116-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 1.856.001 3.598.723 4.907 2.034 1.31 1.311 2.031 3.054 2.03 4.908-.001 3.825-3.113 6.938-6.937 6.938z"/>
                     </svg>
                   </div>
                   <div>
