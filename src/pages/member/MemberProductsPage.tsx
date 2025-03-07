@@ -58,7 +58,7 @@ export function MemberProductsPage() {
         const data = await response.json();
         
         // Formatar os dados para corresponder à interface
-        const formattedProducts = data.map((product: any) => ({
+        const formattedProducts = data.map((product: Product) => ({
           ...product,
           accessType: product.accessType as 'COURSE' | 'COMMUNITY' | 'BOTH',
           lastAccessed: product.lastAccessed ? new Date(product.lastAccessed).toLocaleDateString('pt-BR') : 'Nunca acessado'
@@ -68,7 +68,7 @@ export function MemberProductsPage() {
         
         // Extrair categorias únicas
         const uniqueCategories = ['Todas', ...new Set(formattedProducts.map((product: Product) => product.category))];
-        setCategories(uniqueCategories);
+        setCategories(uniqueCategories as string[]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao carregar produtos');
         console.error('Erro ao buscar produtos:', err);

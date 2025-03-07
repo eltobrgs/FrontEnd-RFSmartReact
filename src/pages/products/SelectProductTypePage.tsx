@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiArrowLeft, FiBook, FiUsers, FiPackage } from 'react-icons/fi';
-import { FaDiscord, FaTelegram, FaWhatsapp, FaInstagram } from 'react-icons/fa';
-import { BsPersonWorkspace } from 'react-icons/bs';
-import { HiShoppingCart } from 'react-icons/hi';
+import { FiBook, FiUsers, FiPackage } from 'react-icons/fi';
 import { Sidebar } from '../../components/Sidebar';
 
 interface ProductTypeCardProps {
@@ -39,7 +36,7 @@ export function SelectProductTypePage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [productData, setProductData] = useState<any>(null);
+  const [productData, setProductData] = useState<unknown>(null);
   
   // Carregar dados do produto do localStorage
   useEffect(() => {

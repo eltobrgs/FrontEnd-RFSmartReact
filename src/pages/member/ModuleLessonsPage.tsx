@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Icons
-import { FiArrowLeft, FiPlay, FiCheck, FiDownload, FiClock, FiChevronDown, FiChevronUp, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiPlay, FiCheck, FiDownload, FiClock, FiChevronDown, FiChevronUp} from 'react-icons/fi';
 
 interface Lesson {
   id: string;
@@ -90,6 +90,7 @@ export function ModuleLessonsPage() {
     };
     
     fetchModuleDetails();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moduleId]);
 
   // Buscar detalhes da aula quando selecionada
