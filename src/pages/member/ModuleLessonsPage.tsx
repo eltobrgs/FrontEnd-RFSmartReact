@@ -92,7 +92,7 @@ export function ModuleLessonsPage() {
     };
     
     fetchModuleData();
-  });
+  }, []);
 
   // Buscar dados da lição
   const fetchLessonData = async (lessonId: string) => {
