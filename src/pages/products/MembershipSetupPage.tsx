@@ -206,7 +206,7 @@ export function MembershipSetupPage() {
           console.log('Módulos carregados do backend:', modulesData);
           
           // Formatar os módulos para o formato esperado
-          const formattedModules = modulesData.map((module: any) => ({
+          const formattedModules = modulesData.map((module: Module) => ({
             id: module.id.toString(), // Garantir que o ID seja string
             title: module.title,
             description: module.description,
@@ -302,8 +302,8 @@ export function MembershipSetupPage() {
             lastAccess: user.lastAccessed ? new Date(user.lastAccessed).toLocaleDateString('pt-BR') : undefined
           }));
           
-          // Não estamos mais usando mockUsers
-          // setUsers(formattedUsers);
+          // Atualizar o estado dos usuários
+          setUsers(formattedUsers);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao carregar detalhes do produto');

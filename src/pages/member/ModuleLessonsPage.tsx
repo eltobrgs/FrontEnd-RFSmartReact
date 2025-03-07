@@ -92,7 +92,7 @@ export function ModuleLessonsPage() {
     };
     
     fetchModuleData();
-  }, [moduleId]);
+  });
 
   // Buscar dados da lição
   const fetchLessonData = async (lessonId: string) => {
@@ -406,66 +406,74 @@ export function ModuleLessonsPage() {
         <div className="flex-1 overflow-y-auto">
           {selectedLesson ? (
             <div className="p-6">
-              <div className="mb-6">
-                <h2 className="text-2xl font-medium mb-2">{selectedLesson.title}</h2>
-                <p className="text-gray-400">{selectedLesson.description}</p>
-              </div>
+              {lessonLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-medium mb-2">{selectedLesson.title}</h2>
+                    <p className="text-gray-400">{selectedLesson.description}</p>
+                  </div>
 
-              {selectedLesson.videoUrl && (
-                <div className="aspect-video mb-6 bg-black rounded-lg overflow-hidden">
-                  <iframe
-                    ref={videoRef}
-                    src={formatVideoUrl(selectedLesson.videoUrl)}
-                    title={selectedLesson.title}
-                    className="w-full h-full"
-                    allowFullScreen
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  ></iframe>
-                </div>
-              )}
-              
-              <div className="flex flex-wrap gap-4 mb-8">
-              {selectedLesson.materialUrl && (
-                  <a
-                  href={selectedLesson.materialUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-                  >
-                    <FiDownload className="w-5 h-5" />
-                    <span>Material Complementar</span>
-                  </a>
-                )}
-                
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => markAsCompleted(selectedLesson.id)}
-                  disabled={progressUpdateLoading || selectedLesson.completed}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    selectedLesson.completed
-                      ? 'bg-green-600 text-white cursor-default'
-                      : 'bg-green-500 text-white hover:bg-green-600'
-                  }`}
-                >
-                  <FiCheck className="w-5 h-5" />
-                  <span>{selectedLesson.completed ? 'Aula Concluída' : 'Marcar como Concluída'}</span>
-                </motion.button>
-              </div>
-              
-              {selectedLesson.progress !== undefined && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-400">Seu progresso</span>
-                    <span className="text-sm text-gray-400">{selectedLesson.progress}%</span>
+                  {selectedLesson.videoUrl && (
+                    <div className="aspect-video mb-6 bg-black rounded-lg overflow-hidden">
+                      <iframe
+                        ref={videoRef}
+                        src={formatVideoUrl(selectedLesson.videoUrl)}
+                        title={selectedLesson.title}
+                        className="w-full h-full"
+                        allowFullScreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      ></iframe>
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-wrap gap-4 mb-8">
+                  {selectedLesson.materialUrl && (
+                      <a
+                      href={selectedLesson.materialUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                        className="flex items-center space-x-2 px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                      >
+                        <FiDownload className="w-5 h-5" />
+                        <span>Material Complementar</span>
+                      </a>
+                    )}
+                    
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => markAsCompleted(selectedLesson.id)}
+                      disabled={progressUpdateLoading || selectedLesson.completed}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                        selectedLesson.completed
+                          ? 'bg-green-600 text-white cursor-default'
+                          : 'bg-green-500 text-white hover:bg-green-600'
+                      }`}
+                    >
+                      <FiCheck className="w-5 h-5" />
+                      <span>{selectedLesson.completed ? 'Aula Concluída' : 'Marcar como Concluída'}</span>
+                    </motion.button>
                   </div>
-                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-500"
-                      style={{ width: `${selectedLesson.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
+                  
+                  {selectedLesson.progress !== undefined && (
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-400">Seu progresso</span>
+                        <span className="text-sm text-gray-400">{selectedLesson.progress}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-500"
+                          style={{ width: `${selectedLesson.progress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ) : (
