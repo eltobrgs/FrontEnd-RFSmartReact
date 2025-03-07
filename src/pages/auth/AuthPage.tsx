@@ -5,10 +5,103 @@ import { useNavigate } from 'react-router-dom';
 export function AuthPage() {
   const [activeForm, setActiveForm] = useState<'login' | 'register'>('login');
   const navigate = useNavigate();
+  
+  // Estados para formulários
+  const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [registerData, setRegisterData] = useState({ 
+    name: '', 
+    email: '', 
+    password: '', 
+    confirmPassword: '',
+    termsAccepted: false
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Add your login logic here
-    navigate('/dashboard');
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    
+    try {
+      const response = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: loginData.email,
+          password: loginData.password,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao fazer login');
+      }
+      
+      // Salvar token e dados do usuário
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // Redirecionar para dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erro ao fazer login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    // Validar senha
+    if (registerData.password !== registerData.confirmPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
+    
+    // Validar termos
+    if (!registerData.termsAccepted) {
+      setError('Você precisa aceitar os termos');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const response = await fetch('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: registerData.name,
+          email: registerData.email,
+          password: registerData.password,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao registrar');
+      }
+      
+      // Salvar token e dados do usuário
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // Redirecionar para dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erro ao registrar');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -115,6 +208,17 @@ export function AuthPage() {
             className="h-8 mb-12" 
           />
 
+          {/* Mensagem de erro */}
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm"
+            >
+              {error}
+            </motion.div>
+          )}
+
           {/* Formulários com animação de transição */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -125,7 +229,7 @@ export function AuthPage() {
               transition={{ duration: 0.3 }}
             >
               {activeForm === 'login' ? (
-                <div>
+                <form onSubmit={handleLogin}>
                   <h1 className="text-2xl text-gray-700 font-medium mb-8">Acesse sua conta</h1>
                   <div className="space-y-6">
                     <motion.button 
@@ -150,21 +254,28 @@ export function AuthPage() {
                         type="email"
                         placeholder="E-mail utilizado na compra"
                         className="w-full px-4 py-3 rounded-lg border border-gray-200 text-gray-700 placeholder-gray-400 focus:outline-none focus:border-green-500 transition-all"
+                        value={loginData.email}
+                        onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                        required
                       />
                       <motion.input
                         whileFocus={{ scale: 1.01 }}
                         type="password"
                         placeholder="Digite a senha"
                         className="w-full px-4 py-3 rounded-lg border border-gray-200 text-gray-700 placeholder-gray-400 focus:outline-none focus:border-green-500 transition-all"
+                        value={loginData.password}
+                        onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                        required
                       />
                     </div>
                     <motion.button
-                    onClick={handleLogin}
+                      type="submit"
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-all font-medium"
+                      disabled={loading}
                     >
-                      Entrar
+                      {loading ? 'Entrando...' : 'Entrar'}
                     </motion.button>
                     <motion.a
                       whileHover={{ scale: 1.05 }}
@@ -174,9 +285,9 @@ export function AuthPage() {
                       Criar ou recuperar senha
                     </motion.a>
                   </div>
-                </div>
+                </form>
               ) : (
-                <div>
+                <form onSubmit={handleRegister}>
                   <h1 className="text-2xl text-gray-700 font-medium mb-8">Crie sua conta</h1>
                   <div className="space-y-6">
                     <motion.button
@@ -201,24 +312,36 @@ export function AuthPage() {
                         type="text"
                         placeholder="Nome completo"
                         className="w-full px-4 py-3 rounded-lg border border-gray-200 text-gray-700 placeholder-gray-400 focus:outline-none focus:border-green-500 transition-all"
+                        value={registerData.name}
+                        onChange={(e) => setRegisterData({...registerData, name: e.target.value})}
+                        required
                       />
                       <motion.input
                         whileFocus={{ scale: 1.01 }}
                         type="email"
                         placeholder="E-mail"
                         className="w-full px-4 py-3 rounded-lg border border-gray-200 text-gray-700 placeholder-gray-400 focus:outline-none focus:border-green-500 transition-all"
+                        value={registerData.email}
+                        onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                        required
                       />
                       <motion.input
                         whileFocus={{ scale: 1.01 }}
                         type="password"
                         placeholder="Crie sua senha"
                         className="w-full px-4 py-3 rounded-lg border border-gray-200 text-gray-700 placeholder-gray-400 focus:outline-none focus:border-green-500 transition-all"
+                        value={registerData.password}
+                        onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                        required
                       />
                       <motion.input
                         whileFocus={{ scale: 1.01 }}
                         type="password"
                         placeholder="Confirme sua senha"
                         className="w-full px-4 py-3 rounded-lg border border-gray-200 text-gray-700 placeholder-gray-400 focus:outline-none focus:border-green-500 transition-all"
+                        value={registerData.confirmPassword}
+                        onChange={(e) => setRegisterData({...registerData, confirmPassword: e.target.value})}
+                        required
                       />
                     </div>
                     <div className="flex items-start gap-2">
@@ -226,6 +349,9 @@ export function AuthPage() {
                         whileHover={{ scale: 1.1 }}
                         type="checkbox"
                         className="mt-1"
+                        checked={registerData.termsAccepted}
+                        onChange={(e) => setRegisterData({...registerData, termsAccepted: e.target.checked})}
+                        required
                       />
                       <span className="text-sm text-gray-600">
                         Li e aceito os{' '}
@@ -243,14 +369,16 @@ export function AuthPage() {
                       </span>
                     </div>
                     <motion.button
+                      type="submit"
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-all font-medium"
+                      disabled={loading}
                     >
-                      Cadastrar
+                      {loading ? 'Cadastrando...' : 'Cadastrar'}
                     </motion.button>
                   </div>
-                </div>
+                </form>
               )}
             </motion.div>
           </AnimatePresence>

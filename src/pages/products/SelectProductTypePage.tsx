@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiBook, FiUsers, FiPackage } from 'react-icons/fi';
 import { FaDiscord, FaTelegram, FaWhatsapp, FaInstagram } from 'react-icons/fa';
 import { BsPersonWorkspace } from 'react-icons/bs';
 import { HiShoppingCart } from 'react-icons/hi';
+import { Sidebar } from '../../components/Sidebar';
 
 interface ProductTypeCardProps {
   icon: React.ReactNode;
@@ -17,113 +19,171 @@ function ProductTypeCard({ icon, title, description, onClick }: ProductTypeCardP
     <motion.div
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className="p-6 bg-white rounded-lg border-2 border-transparent hover:border-green-500 cursor-pointer transition-all"
+      className="bg-white p-6 rounded-xl shadow-sm cursor-pointer border-2 border-transparent hover:border-green-500 transition-all"
       onClick={onClick}
     >
-      <div className="flex flex-col items-center text-center space-y-4">
-        <div className="text-4xl text-gray-700">{icon}</div>
-        <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-        <p className="text-sm text-gray-600">{description}</p>
+      <div className="flex items-start gap-4">
+        <div className="p-3 bg-green-50 text-green-600 rounded-lg">
+          {icon}
+        </div>
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">{title}</h3>
+          <p className="text-gray-600 text-sm">{description}</p>
+        </div>
       </div>
     </motion.div>
   );
 }
 
 export function SelectProductTypePage() {
-  const productTypes = [
-    {
-      icon: <BsPersonWorkspace />,
-      title: "Área de Membros",
-      description: "Cursos on-line e comunidade",
-    },
-    {
-      icon: <FaTelegram />,
-      title: "Telegram",
-      description: "Grupo ou canal privado",
-    },
-    {
-      icon: <FaInstagram />,
-      title: "Instagram",
-      description: "Perfil Privado ou Close Friends",
-    },
-    {
-      icon: <FaDiscord />,
-      title: "Discord",
-      description: "Servidor privado",
-    },
-    {
-      icon: <FaWhatsapp />,
-      title: "Whatsapp",
-      description: "Grupo privado",
-    },
-    {
-      icon: <HiShoppingCart />,
-      title: "Usar somente checkout",
-      description: "Entregar o conteúdo de outra forma",
-    },
-  ];
-
   const navigate = useNavigate();
-
-  const handleProductTypeSelect = (type: string) => {
-    if (type === "Área de Membros") {
-      navigate('/products/create/membership');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [productData, setProductData] = useState<any>(null);
+  
+  // Carregar dados do produto do localStorage
+  useEffect(() => {
+    const storedData = localStorage.getItem('productCreationData');
+    if (storedData) {
+      try {
+        setProductData(JSON.parse(storedData));
+      } catch (err) {
+        console.error('Erro ao carregar dados do produto:', err);
+        setError('Erro ao carregar dados do produto. Por favor, comece novamente.');
+      }
     } else {
-      // Handle other product types
-      console.log(`Selected product type: ${type}`);
+      // Se não houver dados, voltar para a página inicial de criação
+      navigate('/products/create');
+    }
+  }, [navigate]);
+
+  const handleProductTypeSelect = async (type: string) => {
+    if (!productData) {
+      setError('Dados do produto não encontrados. Por favor, comece novamente.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Atualizar os dados do produto com o tipo selecionado
+      const updatedProductData = {
+        ...productData,
+        accessType: type === 'course' ? 'COURSE' : type === 'community' ? 'COMMUNITY' : 'BOTH'
+      };
+      
+      // Salvar no localStorage para uso na próxima etapa
+      localStorage.setItem('productCreationData', JSON.stringify(updatedProductData));
+      
+      // Criar o produto na API
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch('http://localhost:3000/api/products', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedProductData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao criar produto');
+      }
+      
+      const createdProduct = await response.json();
+      
+      // Limpar dados do localStorage
+      localStorage.removeItem('productCreationData');
+      
+      // Navegar para a página de configuração do produto
+      // Redirecionar para a página de configuração de membros com o ID do produto
+      navigate(`/products/${createdProduct.id}/setup`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao criar produto');
+      console.error('Erro:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto p-4 md:p-8">
-        {/* Back button */}
-        <Link
-          to="/products/create"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 group"
-        >
-          <motion.div
-            whileHover={{ x: -3 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <FiArrowLeft className="w-5 h-5" />
-          </motion.div>
-          <span>Voltar</span>
-        </Link>
-
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-12 text-center"
-        >
-          <h1 className="text-3xl font-medium text-gray-900 mb-2">
-            O que você vai vender?
-          </h1>
-          <p className="text-gray-600">
-            Escolha o tipo de produto que você quer criar
-          </p>
-        </motion.div>
-
-        {/* Product types grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          {productTypes.map((type) => (
-            <ProductTypeCard
-              key={type.title}
-              icon={type.icon}
-              title={type.title}
-              description={type.description}
-              onClick={() => handleProductTypeSelect(type.title)}
-            />
-          ))}
-        </motion.div>
+  if (!productData) {
+    return (
+      <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <Sidebar />
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+          <div className="flex justify-center items-center h-full">
+            <div className="text-center">
+              {error ? (
+                <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
+                  {error}
+                </div>
+              ) : (
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto"></div>
+              )}
+              {error && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate('/products/create')}
+                  className="mt-6 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  Voltar para o início
+                </motion.button>
+              )}
+            </div>
+          </div>
+        </main>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <Sidebar />
+      
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-2xl font-medium text-gray-800">Selecione o Tipo de Produto</h1>
+          </div>
+          
+          {error && (
+            <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
+              {error}
+            </div>
+          )}
+          
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <ProductTypeCard
+                icon={<FiBook className="w-6 h-6" />}
+                title="Curso"
+                description="Crie um curso com módulos e aulas para seus alunos aprenderem no seu ritmo."
+                onClick={() => handleProductTypeSelect('course')}
+              />
+              
+              <ProductTypeCard
+                icon={<FiUsers className="w-6 h-6" />}
+                title="Comunidade"
+                description="Crie uma comunidade com posts, grupos privados e interação entre membros."
+                onClick={() => handleProductTypeSelect('community')}
+              />
+              
+              <ProductTypeCard
+                icon={<FiPackage className="w-6 h-6" />}
+                title="Curso + Comunidade"
+                description="Combine um curso estruturado com uma comunidade para oferecer a experiência completa."
+                onClick={() => handleProductTypeSelect('both')}
+              />
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

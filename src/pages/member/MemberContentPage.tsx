@@ -1,8 +1,6 @@
 // React core
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-
-// Components
 
 // Animations
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,200 +10,201 @@ import { FiPlay, FiInfo, FiArrowLeft, FiClock, FiBook, FiUser, FiStar, FiMessage
 import { FaTelegram, FaWhatsapp, FaYoutube } from 'react-icons/fa';
 
 interface Lesson {
-  id: number;
+  id: string;
   title: string;
   description: string;
   duration?: string;
   progress?: number;
   videoUrl?: string;
   materialUrl?: string;
+  completed?: boolean;
 }
 
 interface Module {
-  id: number;
+  id: string;
   title: string;
   description: string;
   image: string;
   lessons: Lesson[];
   progress?: number;
+  completedLessons?: number;
+  totalLessons?: number;
 }
 
 interface PrivateGroup {
-  id: number;
+  id: string;
   name: string;
   description: string;
-  type: 'telegram' | 'whatsapp' | 'youtube';
+  type: 'TELEGRAM' | 'WHATSAPP' | 'YOUTUBE';
   memberCount: number;
-  lastActivity: string;
   isLocked: boolean;
+  inviteLink?: string;
   previewImage?: string;
 }
 
 interface Post {
-  id: number;
+  id: string;
   title: string;
   description: string;
   space: string;
   tags: string[];
   mediaUrl?: string;
-  mediaType?: 'image' | 'video' | 'audio';
+  mediaType?: 'IMAGE' | 'VIDEO' | 'AUDIO';
   attachments?: string[];
   author: {
+    id: string;
     name: string;
     avatar: string;
   };
   createdAt: string;
   likes: number;
-  comments: number;
+  _count?: {
+    comments: number;
+  };
 }
 
-// Mock course details
-const courseDetails = {
-  duration: '12 horas',
-  modules: 8,
-  instructor: 'John Doe',
-  rating: 4.8,
-  students: 1234,
-  lastUpdate: '15/01/2024',
-  certificate: true,
-  level: 'Intermediário'
-};
-
-// Mock private groups data
-const mockPrivateGroups: PrivateGroup[] = [
-  {
-    id: 1,
-    name: 'Canal VIP de Marketing',
-    description: 'Conteúdo exclusivo e atualizações diárias sobre marketing digital',
-    type: 'telegram',
-    memberCount: 256,
-    lastActivity: '2024-01-20T10:00:00Z',
-    isLocked: false
-  },
-  {
-    id: 2,
-    name: 'Grupo de Networking',
-    description: 'Conecte-se com outros profissionais e compartilhe experiências',
-    type: 'whatsapp',
-    memberCount: 128,
-    lastActivity: '2024-01-19T15:30:00Z',
-    isLocked: true
-  },
-  {
-    id: 3,
-    name: 'Lives Exclusivas',
-    description: 'Canal privado com lives e conteúdos exclusivos',
-    type: 'youtube',
-    memberCount: 512,
-    lastActivity: '2024-01-18T20:00:00Z',
-    isLocked: false,
-    previewImage: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800'
-  }
-];
-
-// Mock posts data
-const mockPosts: Post[] = [
-  {
-    id: 1,
-    title: 'Novidades sobre SEO em 2024',
-    description: 'Confira as principais tendências de SEO para este ano e como aplicá-las em suas estratégias de marketing digital.',
-    space: 'general',
-    tags: ['SEO', 'Marketing Digital', 'Tendências'],
-    mediaUrl: 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=800',
-    mediaType: 'image',
-    author: {
-      name: 'Maria Silva',
-      avatar: 'https://ui-avatars.com/api/?name=Maria+Silva'
-    },
-    createdAt: '2024-01-15T10:00:00Z',
-    likes: 45,
-    comments: 12
-  },
-  {
-    id: 2,
-    title: 'Anúncio: Nova Aula sobre Google Analytics 4',
-    description: 'Acabamos de adicionar uma nova aula sobre GA4 no módulo de Analytics. Aprenda a utilizar as novas funcionalidades e métricas.',
-    space: 'announcements',
-    tags: ['Google Analytics', 'Novidades', 'Análise de Dados'],
-    author: {
-      name: 'João Santos',
-      avatar: 'https://ui-avatars.com/api/?name=Joao+Santos'
-    },
-    createdAt: '2024-01-14T15:30:00Z',
-    likes: 32,
-    comments: 8
-  }
-];
-
-// Mock data
-const mockModules: Module[] = [
-  {
-    id: 1,
-    title: 'Introdução ao Marketing Digital',
-    description: 'Fundamentos e conceitos básicos do marketing digital',
-    image: 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-    progress: 60,
-    lessons: [
-      {
-        id: 1,
-        title: 'O que é Marketing Digital',
-        description: 'Aprenda os fundamentos do marketing digital e como aplicá-los em seu negócio.',
-        duration: '45 min',
-        progress: 100,
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-        materialUrl: '#'
-      },
-      {
-        id: 2,
-        title: 'Estratégias de Marketing Digital',
-        description: 'Conheça as principais estratégias utilizadas no marketing digital.',
-        duration: '60 min',
-        progress: 0,
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-        materialUrl: '#'
-      }
-    ]
-  },
-  {
-    id: 2,
-    title: 'SEO e Otimização',
-    description: 'Técnicas avançadas de SEO e otimização para mecanismos de busca',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-    progress: 30,
-    lessons: [
-      {
-        id: 3,
-        title: 'Fundamentos de SEO',
-        description: 'Aprenda os conceitos básicos de SEO.',
-        duration: '55 min',
-        progress: 50,
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-        materialUrl: '#'
-      },
-      {
-        id: 4,
-        title: 'Otimização On-page',
-        description: 'Técnicas de otimização dentro da página.',
-        duration: '65 min',
-        progress: 0,
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-        materialUrl: '#'
-      }
-    ]
-  }
-];
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  image?: string;
+  category: string;
+  accessType: 'COURSE' | 'COMMUNITY' | 'BOTH';
+  modules?: Module[];
+  privateGroups?: PrivateGroup[];
+  posts?: Post[];
+  createdBy?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+}
 
 export function MemberContentPage() {
-  useParams();
+  const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const [showInfo, setShowInfo] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'modules' | 'community' | 'groups'>('modules');
 
-  const { productId } = useParams();
+  // Buscar detalhes do produto
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      if (!productId) return;
+      
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`http://localhost:3000/api/products/${productId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Falha ao carregar detalhes do produto');
+        }
+        
+        const data = await response.json();
+        
+        // Verificar se o usuário tem acesso
+        if (!data.hasAccess) {
+          navigate('/member/products');
+          return;
+        }
+        
+        setProduct(data);
+        
+        // Definir a aba ativa com base no tipo de acesso
+        if (data.accessType === 'COMMUNITY') {
+          setActiveTab('community');
+        } else if (data.modules && data.modules.length > 0) {
+          setActiveTab('modules');
+        } else if (data.privateGroups && data.privateGroups.length > 0) {
+          setActiveTab('groups');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar detalhes do produto');
+        console.error('Erro ao buscar detalhes do produto:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProductDetails();
+  }, [productId, navigate]);
 
-  const handleModuleClick = (moduleId: number) => {
+  const handleModuleClick = (moduleId: string) => {
     navigate(`/member/products/${productId}/modules/${moduleId}`);
   };
+
+  const handleLikePost = async (postId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`http://localhost:3000/api/posts/${postId}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao curtir post');
+      }
+      
+      // Atualizar o post na lista
+      if (product && product.posts) {
+        const updatedPosts = product.posts.map(post => 
+          post.id === postId ? { ...post, likes: post.likes + 1 } : post
+        );
+        
+        setProduct({
+          ...product,
+          posts: updatedPosts
+        });
+      }
+      
+      // Atualizar o post selecionado se estiver aberto
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost({
+          ...selectedPost,
+          likes: selectedPost.likes + 1
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao curtir post:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
+        <h2 className="text-2xl font-bold mb-4">Erro ao carregar conteúdo</h2>
+        <p className="text-gray-300 mb-6">{error || 'Produto não encontrado'}</p>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => navigate('/member/products')}
+          className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+        >
+          Voltar para Meus Produtos
+        </motion.button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -236,366 +235,428 @@ export function MemberContentPage() {
       <div className="relative pt-16">
         <div className="w-full h-[70vh] relative">
           <img
-            src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1500&auto=format&fit=crop&q=80&ixlib=rb-4.0.3"
-            alt="Featured Content"
+            src={product.image || `https://source.unsplash.com/random/1500x800/?${product.category.toLowerCase()}`}
+            alt={product.name}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent" />
           <div className="absolute bottom-0 left-0 p-8 w-full md:w-2/3 lg:w-1/2">
-            <h1 className="text-4xl font-bold mb-4">Marketing Digital Masterclass</h1>
-            <p className="text-lg text-gray-300 mb-6">Domine as estratégias mais eficientes de marketing digital e transforme seu negócio com este curso completo.</p>
+            <h1 className="text-4xl font-bold mb-4">{product.name}</h1>
+            <p className="text-lg text-gray-300 mb-6">{product.description}</p>
             <div className="flex space-x-4">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 bg-white text-gray-900 rounded-lg font-medium flex items-center space-x-2 hover:bg-gray-200 transition-colors"
-                onClick={() => handleModuleClick(mockModules[0].id)}
+                onClick={() => setShowInfo(!showInfo)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
               >
-                <FiPlay className="w-5 h-5" />
-                <span>Começar</span>
+                <FiInfo className="w-5 h-5" />
+                <span>Informações</span>
               </motion.button>
-              <div className="relative">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowInfo(!showInfo)}
-                  className="px-6 py-3 bg-gray-600/80 rounded-lg font-medium flex items-center space-x-2 hover:bg-gray-600 transition-colors"
-                >
-                  <FiInfo className="w-5 h-5" />
-                  <span>Mais Informações</span>
-                </motion.button>
-
-                <AnimatePresence>
-                  {showInfo && (
-                    <>
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-40"
-                        onClick={() => setShowInfo(false)}
-                      />
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="absolute left-0 top-full mt-2 w-80 bg-gray-800 rounded-lg shadow-xl z-50 overflow-hidden"
-                      >
-                        <div className="p-6 space-y-4">
-                          <div className="flex items-center gap-3">
-                            <FiClock className="w-5 h-5 text-green-500" />
-                            <div>
-                              <p className="text-sm text-gray-400">Duração total</p>
-                              <p className="font-medium">{courseDetails.duration}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <FiBook className="w-5 h-5 text-green-500" />
-                            <div>
-                              <p className="text-sm text-gray-400">Módulos</p>
-                              <p className="font-medium">{courseDetails.modules} módulos</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <FiUser className="w-5 h-5 text-green-500" />
-                            <div>
-                              <p className="text-sm text-gray-400">Instrutor</p>
-                              <p className="font-medium">{courseDetails.instructor}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <FiStar className="w-5 h-5 text-green-500" />
-                            <div>
-                              <p className="text-sm text-gray-400">Avaliação</p>
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium">{courseDetails.rating}</p>
-                                <p className="text-sm text-gray-400">({courseDetails.students} alunos)</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="pt-4 border-t border-gray-700">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-400">Última atualização</span>
-                              <span>{courseDetails.lastUpdate}</span>
-                            </div>
-                            <div className="flex justify-between text-sm mt-2">
-                              <span className="text-gray-400">Nível</span>
-                              <span>{courseDetails.level}</span>
-                            </div>
-                            <div className="flex justify-between text-sm mt-2">
-                              <span className="text-gray-400">Certificado</span>
-                              <span>{courseDetails.certificate ? 'Sim' : 'Não'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modules Grid */}
-      <div className="px-8 pb-16 mt-16 relative z-10">
-        {/* Modules Section */}
-        <h2 className="text-2xl font-medium mb-8">Módulos do Curso</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
-          {mockModules.map((module) => (
-            <motion.div
-              key={module.id}
-              whileHover={{ scale: 1.05 }}
-              className="relative group cursor-pointer"
-              onClick={() => handleModuleClick(module.id)}
-            >
-              <div className="aspect-video relative rounded-lg overflow-hidden">
-                <img
-                  src={module.image}
-                  alt={module.title}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                />
-                {module.progress !== undefined && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-600">
-                    <div
-                      className="h-full bg-green-500"
-                      style={{ width: `${module.progress}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-              <div className="mt-4">
-                <h3 className="font-medium text-lg group-hover:text-green-500 transition-colors">{module.title}</h3>
-                <p className="text-sm text-gray-400 mt-1">{module.description}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-sm text-gray-400">{module.lessons.length} aulas</span>
-                  {module.progress !== undefined && (
-                    <span className="text-sm text-gray-400">{module.progress}% completo</span>
-                  )}
-                </div>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <motion.div
+      {/* Course Info Panel */}
+      <AnimatePresence>
+        {showInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="bg-gray-800 p-6 md:p-8"
+          >
+            <div className="max-w-7xl mx-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Informações do Produto</h2>
+                <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="p-3 bg-green-500 rounded-full text-white shadow-lg"
+                  onClick={() => setShowInfo(false)}
+                  className="p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
                 >
-                  <FiPlay className="w-6 h-6" />
-                </motion.div>
+                  <FiX className="w-5 h-5" />
+                </motion.button>
               </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Community Feed Section */}
-        <div>
-          <h2 className="text-2xl font-medium mb-8">Comunidade</h2>
-          <div className="space-y-6">
-            {mockPosts.map((post) => (
-              <div 
-                key={post.id} 
-                className="bg-gray-800 rounded-lg p-6 space-y-4 cursor-pointer hover:bg-gray-700/50 transition-colors"
-                onClick={() => setSelectedPost(post)}
-              >
-                <div className="flex items-center gap-4">
-                  <img
-                    src={post.author.avatar}
-                    alt={post.author.name}
-                    className="w-10 h-10 rounded-full"
-                  />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {product.modules && product.modules.length > 0 && (
+                  <>
+                    <div className="flex items-center space-x-3">
+                      <FiClock className="w-6 h-6 text-green-400" />
+                      <div>
+                        <p className="text-gray-400 text-sm">Módulos</p>
+                        <p className="font-medium">{product.modules.length}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3">
+                      <FiBook className="w-6 h-6 text-green-400" />
+                      <div>
+                        <p className="text-gray-400 text-sm">Aulas</p>
+                        <p className="font-medium">
+                          {product.modules.reduce((total, module) => total + (module.lessons?.length || 0), 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {product.createdBy && (
+                  <div className="flex items-center space-x-3">
+                    <FiUser className="w-6 h-6 text-green-400" />
+                    <div>
+                      <p className="text-gray-400 text-sm">Instrutor</p>
+                      <p className="font-medium">{product.createdBy.name}</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center space-x-3">
+                  <FiStar className="w-6 h-6 text-green-400" />
                   <div>
-                    <h3 className="font-medium text-white">{post.author.name}</h3>
-                    <p className="text-sm text-gray-400">{new Date(post.createdAt).toLocaleDateString('pt-BR')}</p>
+                    <p className="text-gray-400 text-sm">Tipo de Acesso</p>
+                    <p className="font-medium">
+                      {product.accessType === 'BOTH' ? 'Curso + Comunidade' : 
+                       product.accessType === 'COURSE' ? 'Curso' : 'Comunidade'}
+                    </p>
                   </div>
                 </div>
-
-                <div>
-                  <h4 className="text-xl font-medium mb-2">{post.title}</h4>
-                  <p className="text-gray-300">{post.description}</p>
-                </div>
-
-                {post.mediaUrl && post.mediaType === 'image' && (
-                  <img
-                    src={post.mediaUrl}
-                    alt={post.title}
-                    className="w-full h-64 object-cover rounded-lg"
-                  />
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-300"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-6 pt-4 border-t border-gray-700">
-                  <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                    <FiHeart className="w-5 h-5" />
-                    <span>{post.likes}</span>
-                  </button>
-                  <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                    <FiMessageSquare className="w-5 h-5" />
-                    <span>{post.comments}</span>
-                  </button>
-                  <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-                    <FiShare2 className="w-5 h-5" />
-                    <span>Compartilhar</span>
-                  </button>
-                </div>
               </div>
-            ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Content Tabs */}
+      <div className="bg-gray-900 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-1 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+            {product.accessType !== 'COMMUNITY' && product.modules && product.modules.length > 0 && (
+              <button
+                onClick={() => setActiveTab('modules')}
+                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${activeTab === 'modules' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              >
+                Módulos
+              </button>
+            )}
+            
+            {product.accessType !== 'COURSE' && product.posts && product.posts.length > 0 && (
+              <button
+                onClick={() => setActiveTab('community')}
+                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${activeTab === 'community' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              >
+                Comunidade
+              </button>
+            )}
+            
+            {product.accessType !== 'COURSE' && product.privateGroups && product.privateGroups.length > 0 && (
+              <button
+                onClick={() => setActiveTab('groups')}
+                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${activeTab === 'groups' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              >
+                Grupos Privados
+              </button>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Post Modal */}
-        <AnimatePresence>
-          {selectedPost && (
-            <>
+      {/* Content Area */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Modules Tab */}
+        {activeTab === 'modules' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {product.modules && product.modules.map((module) => (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.5 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black cursor-pointer z-40"
-                onClick={() => setSelectedPost(null)}
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="fixed inset-8 bg-gray-800 rounded-xl shadow-xl overflow-hidden z-50 flex flex-col"
+                key={module.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleModuleClick(module.id)}
+                className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group"
               >
-                <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-                  <h2 className="text-xl font-medium text-white">{selectedPost.title}</h2>
-                  <button
-                    onClick={() => setSelectedPost(null)}
-                    className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
-                  >
-                    <FiX className="w-5 h-5" />
-                  </button>
+                <div className="aspect-w-16 aspect-h-9 relative">
+                  <img
+                    src={module.image || `https://source.unsplash.com/random/800x450/?${product.category.toLowerCase()}`}
+                    alt={module.title}
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  {module.progress !== undefined && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700">
+                      <div
+                        className="h-full bg-green-500"
+                        style={{ width: `${module.progress}%` }}
+                      ></div>
+                    </div>
+                  )}
                 </div>
+                <div className="p-5">
+                  <h3 className="text-xl font-medium mb-2 group-hover:text-green-400 transition-colors">{module.title}</h3>
+                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">{module.description}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">{module.lessons?.length || 0} aulas</span>
+                    {module.progress !== undefined && (
+                      <span className="text-sm text-gray-500">
+                        {module.completedLessons || 0}/{module.totalLessons || module.lessons?.length || 0} concluídas
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                  <div className="flex items-center gap-4">
+        {/* Community Tab */}
+        {activeTab === 'community' && (
+          <div className="space-y-6">
+            {product.posts && product.posts.map((post) => (
+              <motion.div
+                key={post.id}
+                whileHover={{ scale: 1.01 }}
+                className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer"
+                onClick={() => setSelectedPost(post)}
+              >
+                <div className="p-6">
+                  <div className="flex items-center space-x-3 mb-4">
                     <img
-                      src={selectedPost.author.avatar}
-                      alt={selectedPost.author.name}
+                      src={post.author.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author.name)}`}
+                      alt={post.author.name}
                       className="w-10 h-10 rounded-full"
                     />
                     <div>
-                      <h3 className="font-medium text-white">{selectedPost.author.name}</h3>
-                      <p className="text-sm text-gray-400">
-                        {new Date(selectedPost.createdAt).toLocaleDateString('pt-BR')}
-                      </p>
+                      <h4 className="font-medium">{post.author.name}</h4>
+                      <p className="text-sm text-gray-400">{new Date(post.createdAt).toLocaleDateString('pt-BR')}</p>
                     </div>
                   </div>
-
-                  <p className="text-gray-300 text-lg">{selectedPost.description}</p>
-
-                  {selectedPost.mediaUrl && selectedPost.mediaType === 'image' && (
-                    <img
-                      src={selectedPost.mediaUrl}
-                      alt={selectedPost.title}
-                      className="w-full rounded-lg"
-                    />
+                  
+                  <h3 className="text-xl font-medium mb-2">{post.title}</h3>
+                  <p className="text-gray-300 mb-4">{post.description}</p>
+                  
+                  {post.mediaUrl && post.mediaType === 'IMAGE' && (
+                    <div className="mb-4 rounded-lg overflow-hidden">
+                      <img
+                        src={post.mediaUrl}
+                        alt={post.title}
+                        className="w-full h-auto max-h-96 object-cover"
+                      />
+                    </div>
                   )}
-
-                  <div className="flex flex-wrap gap-2">
-                    {selectedPost.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-300"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-6 pt-4 border-t border-gray-700">
-                    <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                  
+                  {post.tags && post.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {post.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-300"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="flex space-x-4 text-gray-400">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLikePost(post.id);
+                      }}
+                      className="flex items-center space-x-1 hover:text-green-400 transition-colors"
+                    >
                       <FiHeart className="w-5 h-5" />
-                      <span>{selectedPost.likes}</span>
+                      <span>{post.likes}</span>
                     </button>
-                    <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                    
+                    <button className="flex items-center space-x-1 hover:text-green-400 transition-colors">
                       <FiMessageSquare className="w-5 h-5" />
-                      <span>{selectedPost.comments}</span>
+                      <span>{post._count?.comments || 0}</span>
                     </button>
-                    <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+                    
+                    <button
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center space-x-1 hover:text-green-400 transition-colors"
+                    >
                       <FiShare2 className="w-5 h-5" />
                       <span>Compartilhar</span>
                     </button>
                   </div>
                 </div>
               </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+            ))}
+          </div>
+        )}
 
-        {/* Private Groups and Channels Section */}
-        <div className="mt-16">
-          <h2 className="text-2xl font-medium mb-8">Grupos e Canais Privados</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockPrivateGroups.map((group) => (
+        {/* Groups Tab */}
+        {activeTab === 'groups' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {product.privateGroups && product.privateGroups.map((group) => (
               <motion.div
                 key={group.id}
                 whileHover={{ scale: 1.02 }}
-                className="bg-gray-800 rounded-lg overflow-hidden cursor-pointer"
+                className="bg-gray-800 rounded-xl overflow-hidden"
               >
-                {group.previewImage ? (
-                  <div className="aspect-video relative">
+                <div className="aspect-w-16 aspect-h-9 relative">
+                  {group.previewImage ? (
                     <img
                       src={group.previewImage}
                       alt={group.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-48 object-cover"
                     />
-                    {group.isLocked && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="text-white bg-gray-900/80 px-3 py-1 rounded-full text-sm">
-                          Acesso Bloqueado
-                        </span>
-                      </div>
-                    )}
+                  ) : (
+                    <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
+                      {group.type === 'TELEGRAM' && <FaTelegram className="w-16 h-16 text-blue-400" />}
+                      {group.type === 'WHATSAPP' && <FaWhatsapp className="w-16 h-16 text-green-400" />}
+                      {group.type === 'YOUTUBE' && <FaYoutube className="w-16 h-16 text-red-500" />}
+                    </div>
+                  )}
+                  
+                  <div className="absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium bg-gray-900 text-white">
+                    {group.memberCount} membros
                   </div>
-                ) : (
-                  <div className="aspect-video bg-gray-700 flex items-center justify-center">
-                    {group.type === 'telegram' && (
-                      <FaTelegram className="w-12 h-12 text-gray-500" />
-                    )}
-                    {group.type === 'whatsapp' && (
-                      <FaWhatsapp className="w-12 h-12 text-gray-500" />
-                    )}
-                    {group.type === 'youtube' && (
-                      <FaYoutube className="w-12 h-12 text-gray-500" />
-                    )}
-                  </div>
-                )}
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-lg text-white">{group.name}</h3>
-                    <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded-full">
-                      {group.type.charAt(0).toUpperCase() + group.type.slice(1)}
-                    </span>
-                  </div>
+                </div>
+                
+                <div className="p-5">
+                  <h3 className="text-xl font-medium mb-2">{group.name}</h3>
                   <p className="text-gray-400 text-sm mb-4">{group.description}</p>
-                  <div className="flex items-center justify-between text-sm text-gray-400">
-                    <span>{group.memberCount} membros</span>
-                    <span>Ativo {new Date(group.lastActivity).toLocaleDateString('pt-BR')}</span>
-                  </div>
+                  
+                  {group.isLocked ? (
+                    <div className="flex items-center justify-center p-2 bg-gray-700 rounded-lg text-gray-400">
+                      <FiInfo className="w-5 h-5 mr-2" />
+                      <span>Acesso bloqueado pelo administrador</span>
+                    </div>
+                  ) : (
+                    <a
+                      href={group.inviteLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full text-center px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg transition-colors"
+                    >
+                      Acessar {group.type === 'TELEGRAM' ? 'Telegram' : group.type === 'WHATSAPP' ? 'WhatsApp' : 'YouTube'}
+                    </a>
+                  )}
                 </div>
               </motion.div>
             ))}
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Post Detail Modal */}
+      <AnimatePresence>
+        {selectedPost && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black cursor-pointer z-40"
+              onClick={() => setSelectedPost(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed inset-8 bg-gray-800 rounded-xl shadow-xl overflow-hidden z-50 flex flex-col"
+            >
+              <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+                <h2 className="text-xl font-medium">{selectedPost.title}</h2>
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="p-2 rounded-full hover:bg-gray-700 transition-colors"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex items-center space-x-3 mb-6">
+                  <img
+                    src={selectedPost.author.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedPost.author.name)}`}
+                    alt={selectedPost.author.name}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <div>
+                    <h4 className="font-medium">{selectedPost.author.name}</h4>
+                    <p className="text-sm text-gray-400">{new Date(selectedPost.createdAt).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                </div>
+                
+                <p className="text-gray-300 mb-6">{selectedPost.description}</p>
+                
+                {selectedPost.mediaUrl && selectedPost.mediaType === 'IMAGE' && (
+                  <div className="mb-6 rounded-lg overflow-hidden">
+                    <img
+                      src={selectedPost.mediaUrl}
+                      alt={selectedPost.title}
+                      className="w-full h-auto max-h-96 object-cover"
+                    />
+                  </div>
+                )}
+                
+                {selectedPost.tags && selectedPost.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {selectedPost.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-300"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="flex space-x-4 text-gray-400 mb-8">
+                  <button
+                    onClick={() => handleLikePost(selectedPost.id)}
+                    className="flex items-center space-x-1 hover:text-green-400 transition-colors"
+                  >
+                    <FiHeart className="w-5 h-5" />
+                    <span>{selectedPost.likes}</span>
+                  </button>
+                  
+                  <button className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+                    <FiMessageSquare className="w-5 h-5" />
+                    <span>{selectedPost._count?.comments || 0}</span>
+                  </button>
+                  
+                  <button className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+                    <FiShare2 className="w-5 h-5" />
+                    <span>Compartilhar</span>
+                  </button>
+                </div>
+                
+                <div className="border-t border-gray-700 pt-6">
+                  <h3 className="text-lg font-medium mb-4">Comentários</h3>
+                  
+                  <div className="mb-6">
+                    <textarea
+                      placeholder="Escreva um comentário..."
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                      rows={3}
+                    ></textarea>
+                    <div className="flex justify-end mt-2">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                      >
+                        Comentar
+                      </motion.button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <p className="text-gray-400 text-center">Nenhum comentário ainda. Seja o primeiro a comentar!</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

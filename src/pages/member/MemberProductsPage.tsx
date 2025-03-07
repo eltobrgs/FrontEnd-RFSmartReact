@@ -1,5 +1,5 @@
 // React core
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Components
 import { Sidebar } from '../../components/Sidebar';
@@ -10,49 +10,77 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Icons
 import { FiSearch, FiX } from 'react-icons/fi';
 
-// Mock data
+// Navigation
 import { useNavigate } from 'react-router-dom';
 
 interface Product {
-  id: number;
+  id: string;
   name: string;
   description: string;
   image: string;
   category: string;
-  accessType: 'course' | 'community' | 'both';
+  accessType: 'COURSE' | 'COMMUNITY' | 'BOTH';
   lastAccessed?: string;
+  createdBy?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
 }
-
-const mockProducts: Product[] = [
-  {
-    id: 1,
-    name: 'Curso de Marketing Digital',
-    description: 'Aprenda as melhores estratégias de marketing digital',
-    image: 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-    category: 'Marketing',
-    accessType: 'course',
-    lastAccessed: '2024-01-15'
-  },
-  {
-    id: 2,
-    name: 'Masterclass de Vendas',
-    description: 'Técnicas avançadas de vendas e negociação',
-    image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-    category: 'Vendas',
-    accessType: 'both',
-    lastAccessed: '2024-01-20'
-  },
-];
 
 export function MemberProductsPage() {
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>(['Todas']);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const categories = ['Todas', ...new Set(mockProducts.map(product => product.category))];
+  // Buscar produtos do usuário
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch('http://localhost:3000/api/products/my', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Falha ao carregar produtos');
+        }
+        
+        const data = await response.json();
+        
+        // Formatar os dados para corresponder à interface
+        const formattedProducts = data.map((product: any) => ({
+          ...product,
+          accessType: product.accessType as 'COURSE' | 'COMMUNITY' | 'BOTH',
+          lastAccessed: product.lastAccessed ? new Date(product.lastAccessed).toLocaleDateString('pt-BR') : 'Nunca acessado'
+        }));
+        
+        setProducts(formattedProducts);
+        
+        // Extrair categorias únicas
+        const uniqueCategories = ['Todas', ...new Set(formattedProducts.map((product: Product) => product.category))];
+        setCategories(uniqueCategories);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar produtos');
+        console.error('Erro ao buscar produtos:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, []);
 
-  const filteredProducts = mockProducts.filter(product => {
+  const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Todas' || product.category === selectedCategory;
@@ -94,6 +122,36 @@ export function MemberProductsPage() {
           </div>
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+          </div>
+        )}
+
+        {/* Error state */}
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && filteredProducts.length === 0 && (
+          <div className="text-center py-12">
+            <h3 className="text-xl font-medium text-gray-700 mb-2">Nenhum produto encontrado</h3>
+            <p className="text-gray-500">Você ainda não tem acesso a nenhum produto ou nenhum produto corresponde aos filtros aplicados.</p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/member/buy')}
+              className="mt-6 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+            >
+              Explorar produtos disponíveis
+            </motion.button>
+          </div>
+        )}
+
         {/* Products grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProducts.map((product) => (
@@ -105,13 +163,13 @@ export function MemberProductsPage() {
             >
               <div className="aspect-w-16 aspect-h-9 relative">
                 <img
-                  src={product.image}
+                  src={product.image || `https://source.unsplash.com/random/800x600/?${product.category.toLowerCase()}`}
                   alt={product.name}
                   className="w-full h-48 object-cover"
                 />
                 <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700`}>
-                  {product.accessType === 'both' ? 'Curso + Comunidade' : 
-                   product.accessType === 'course' ? 'Curso' : 'Comunidade'}
+                  {product.accessType === 'BOTH' ? 'Curso + Comunidade' : 
+                   product.accessType === 'COURSE' ? 'Curso' : 'Comunidade'}
                 </div>
               </div>
               <div className="p-4">
@@ -158,7 +216,7 @@ export function MemberProductsPage() {
               >
                 <div className="md:w-1/2 relative">
                   <img
-                    src={selectedProduct.image}
+                    src={selectedProduct.image || `https://source.unsplash.com/random/800x600/?${selectedProduct.category.toLowerCase()}`}
                     alt={selectedProduct.name}
                     className="w-full h-full object-cover"
                   />
@@ -174,8 +232,8 @@ export function MemberProductsPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <h2 className="text-2xl font-medium text-gray-900">{selectedProduct.name}</h2>
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                        {selectedProduct.accessType === 'both' ? 'Curso + Comunidade' : 
-                         selectedProduct.accessType === 'course' ? 'Curso' : 'Comunidade'}
+                        {selectedProduct.accessType === 'BOTH' ? 'Curso + Comunidade' : 
+                         selectedProduct.accessType === 'COURSE' ? 'Curso' : 'Comunidade'}
                       </span>
                     </div>
                     <p className="text-gray-500">{selectedProduct.description}</p>
@@ -192,6 +250,12 @@ export function MemberProductsPage() {
                         <span className="text-gray-500">Último acesso</span>
                         <span className="font-medium">{selectedProduct.lastAccessed}</span>
                       </div>
+                      {selectedProduct.createdBy && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Criado por</span>
+                          <span className="font-medium">{selectedProduct.createdBy.name}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

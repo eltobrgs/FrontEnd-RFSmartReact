@@ -2,55 +2,42 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
 
-interface PrivateChannelModalProps {
+interface AddLessonModalProps {
   isOpen: boolean;
   onClose: () => void;
-  platform: 'telegram' | 'whatsapp' | 'youtube';
-  onSubmit?: (groupData: { name: string; description: string; type: string }) => void;
+  moduleTitle: string;
+  onSubmit?: (lessonData: { title: string; description: string; videoUrl: string }) => void;
 }
 
-export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: PrivateChannelModalProps) {
-  const [name, setName] = useState('');
+export function AddLessonModal({ isOpen, onClose, moduleTitle, onSubmit }: AddLessonModalProps) {
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !description) {
+    if (!title || !description) {
       setError('Por favor, preencha todos os campos obrigatórios');
       return;
     }
     
     if (onSubmit) {
       onSubmit({
-        name,
+        title,
         description,
-        type: platform.toUpperCase()
+        videoUrl
       });
     }
     
     // Limpar o formulário
-    setName('');
+    setTitle('');
     setDescription('');
+    setVideoUrl('');
     setError('');
     
     onClose();
-  };
-
-  const platformInfo = {
-    telegram: {
-      title: 'Telegram',
-      description: 'Conecte seu canal do Telegram para compartilhar conteúdo exclusivo com seus membros.'
-    },
-    whatsapp: {
-      title: 'WhatsApp',
-      description: 'Conecte seu grupo do WhatsApp para interagir diretamente com seus membros.'
-    },
-    youtube: {
-      title: 'YouTube',
-      description: 'Conecte seu canal do YouTube para compartilhar vídeos exclusivos com seus membros.'
-    }
   };
 
   return (
@@ -71,7 +58,10 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
             className="fixed inset-8 bg-gray-800 rounded-xl shadow-xl overflow-hidden z-50 flex flex-col"
           >
             <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-medium text-white">Conectar {platformInfo[platform].title}</h2>
+              <div>
+                <h2 className="text-xl font-medium text-white">Adicionar Aula</h2>
+                <p className="text-sm text-gray-400">Módulo: {moduleTitle}</p>
+              </div>
               <button
                 onClick={onClose}
                 className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
@@ -81,8 +71,6 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
-              <p className="text-gray-400 mb-6">{platformInfo[platform].description}</p>
-              
               {error && (
                 <div className="bg-red-900/30 text-red-400 p-4 rounded-lg mb-6">
                   {error}
@@ -91,16 +79,16 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
-                    Nome do Canal *
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">
+                    Título da Aula *
                   </label>
                   <input
                     type="text"
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
-                    placeholder={`Ex: Canal ${platformInfo[platform].title} Exclusivo`}
+                    placeholder="Ex: Introdução ao Marketing Digital"
                     required
                   />
                 </div>
@@ -115,8 +103,22 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
-                    placeholder="Descreva o propósito deste canal"
+                    placeholder="Descreva o conteúdo desta aula"
                     required
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-300 mb-1">
+                    URL do Vídeo
+                  </label>
+                  <input
+                    type="url"
+                    id="videoUrl"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
+                    placeholder="Ex: https://www.youtube.com/watch?v=..."
                   />
                 </div>
                 
@@ -127,7 +129,7 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
                     whileTap={{ scale: 0.95 }}
                     className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                   >
-                    Conectar Canal
+                    Adicionar Aula
                   </motion.button>
                 </div>
               </form>
