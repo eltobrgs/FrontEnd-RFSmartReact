@@ -1,3 +1,4 @@
+//para produçao 
 export const API_BASE_URL = 'https://backend-rfsmart.onrender.com/api'; 
 
 //para teste
