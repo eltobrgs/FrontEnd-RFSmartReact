@@ -97,28 +97,29 @@ export function BuyProductsPage() {
 
   const handleBuyNow = async (productId: string) => {
     try {
-      // Encontrar o produto selecionado
-      const product = products.find(p => p.id === productId);
+      setLoading(true);
+      const token = localStorage.getItem('token');
       
-      if (product) {
-        setPaymentProduct(product);
-        setIsPaymentModalOpen(true);
+      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao carregar detalhes do produto');
       }
+      
+      const product = await response.json();
+      console.log('Produto carregado para pagamento:', product);
+      console.log('Link do WhatsApp:', product.contactWhatsapp);
+      setPaymentProduct(product);
+      setIsPaymentModalOpen(true);
     } catch (err) {
-      console.error('Erro ao processar compra:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao processar compra');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const formatWhatsAppLink = (number: string, productName: string, price: number) => {
-    // Remover caracteres não numéricos
-    const cleanNumber = number.replace(/\D/g, '');
-    
-    // Formatar a mensagem
-    const message = encodeURIComponent(
-      `Olá! Gostaria de comprar o produto "${productName}" por R$ ${price.toFixed(2)}. Como posso efetuar o pagamento?`
-    );
-    
-    return `https://wa.me/${cleanNumber}?text=${message}`;
   };
 
   return (
@@ -327,86 +328,76 @@ export function BuyProductsPage() {
         {/* Payment Modal */}
         <AnimatePresence>
           {isPaymentModalOpen && paymentProduct && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.5 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black cursor-pointer z-50"
-                onClick={() => setIsPaymentModalOpen(false)}
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="fixed inset-0 flex items-center justify-center z-50 p-4"
-              >
-                <div className="bg-white rounded-xl shadow-xl overflow-hidden max-w-md w-full">
-                  <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-medium text-gray-900">Finalizar Compra</h2>
-                      <button
-                        onClick={() => setIsPaymentModalOpen(false)}
-                        className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                      >
-                        <FiX className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="p-6">
-                    <div className="mb-6">
-                      <h3 className="font-medium text-gray-900 mb-2">Resumo da compra</h3>
-                      <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                        <img
-                          src={paymentProduct.image || `https://source.unsplash.com/random/100x100/?${paymentProduct.category.toLowerCase()}`}
-                          alt={paymentProduct.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                        <div>
-                          <p className="font-medium">{paymentProduct.name}</p>
-                          <div className="flex items-baseline gap-1 mt-1">
-                            <span className="text-sm text-gray-500">R$</span>
-                            <span className="text-lg font-medium text-gray-900">
-                              {(paymentProduct.discountPrice || paymentProduct.price).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg w-full max-w-md p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-medium">Finalizar Compra</h2>
+                  <button
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <div className="mb-6">
+                  <h3 className="font-medium mb-2">Resumo da compra</h3>
+                  <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                    <img
+                      src={paymentProduct.image || `https://source.unsplash.com/random/800x600/?${paymentProduct.category.toLowerCase()}`}
+                      alt={paymentProduct.name}
+                      className="w-16 h-16 object-cover rounded"
+                    />
+                    <div>
+                      <div className="font-medium">{paymentProduct.name}</div>
+                      <div className="text-lg font-bold text-green-600">
+                        R$ {paymentProduct.discountPrice?.toFixed(2) || paymentProduct.price.toFixed(2)}
                       </div>
-                    </div>
-                    
-                    <div className="mb-6">
-                      <h3 className="font-medium text-gray-900 mb-2">Instruções de Pagamento</h3>
-                      <p className="text-gray-600 mb-4">
-                        Para finalizar sua compra, entre em contato com o vendedor via WhatsApp. 
-                        Após o pagamento, seu acesso será liberado.
-                      </p>
-                      
-                      {paymentProduct.contactWhatsapp ? (
-                        <a
-                          href={formatWhatsAppLink(
-                            paymentProduct.contactWhatsapp,
-                            paymentProduct.name,
-                            paymentProduct.discountPrice || paymentProduct.price
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                        >
-                          <FaWhatsapp className="w-5 h-5" />
-                          <span>Conversar com Vendedor</span>
-                        </a>
-                      ) : (
-                        <div className="text-center p-4 bg-yellow-50 text-yellow-700 rounded-lg">
-                          <p>O vendedor não disponibilizou um número de WhatsApp para contato.</p>
-                          <p className="mt-2">Entre em contato pelo suporte da plataforma.</p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            </>
+                
+                <div className="mb-6">
+                  <h3 className="font-medium mb-2">Instruções de Pagamento</h3>
+                  <p className="text-gray-600 mb-4">
+                    Para finalizar sua compra, entre em contato com o vendedor via WhatsApp. Após o pagamento, seu acesso será liberado.
+                  </p>
+                  
+                  <div className="bg-gray-100 p-2 rounded mb-4">
+                    <p className="text-sm text-gray-600">Link do WhatsApp: {paymentProduct.contactWhatsapp || 'Não disponível'}</p>
+                  </div>
+                  
+                  {paymentProduct.contactWhatsapp ? (
+                    <a
+                      href={paymentProduct.contactWhatsapp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      <FaWhatsapp className="w-5 h-5" />
+                      Contatar Vendedor
+                    </a>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-yellow-700">
+                      <p className="text-center">
+                        O vendedor não disponibilizou um link de WhatsApp para contato.
+                        <br />
+                        Entre em contato pelo suporte da plataforma.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setIsPaymentModalOpen(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </AnimatePresence>
       </main>

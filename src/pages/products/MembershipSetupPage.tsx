@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiArrowLeft, FiCalendar, FiMessageCircle, FiUsers, FiBook, FiPlus, FiUserPlus, FiX, FiCheck } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiMessageCircle, FiUsers, FiPlus, FiX, FiCheck, FiInfo } from 'react-icons/fi';
 import { useState, useEffect } from 'react';
 import { CreatePostModal } from '../../components/CreatePostModal';
 import { CourseCreateSectionModal } from '../../components/CourseCreateSectionModal';
 import { PrivateChannelModal } from '../../components/PrivateChannelModal';
 import { AddLessonModal } from '../../components/AddLessonModal';
-import { ModuleDetailsModal } from '../../components/ModuleDetailsModal';
 import { ProductAccessModal } from '../../components/ProductAccessModal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../variables/api';
@@ -64,6 +63,15 @@ interface Post {
   space: string;
 }
 
+interface Lesson {
+  id: string;
+  title: string;
+  description: string;
+  duration?: string;
+  videoUrl?: string;
+  materialUrl?: string;
+}
+
 interface Module {
   id: number;
   title: string;
@@ -71,6 +79,7 @@ interface Module {
   icon: string;
   lessonsCount: number;
   createdAt: string;
+  lessons?: Lesson[];
 }
 
 interface Group {
@@ -157,7 +166,6 @@ export function MembershipSetupPage() {
   const [isPrivateChannelModalOpen, setIsPrivateChannelModalOpen] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<'telegram' | 'whatsapp' | 'youtube'>('telegram');
   const [isAddLessonModalOpen, setIsAddLessonModalOpen] = useState(false);
-  const [isModuleDetailsModalOpen, setIsModuleDetailsModalOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [users, setUsers] = useState<User[]>(mockUsers);
@@ -517,6 +525,43 @@ export function MembershipSetupPage() {
   // Dados mockados para canais privados
   const [mockChannels, setMockChannels] = useState<Channel[]>([]);
 
+  // Função para abrir o modal de adicionar aula
+  const handleAddLessonClick = (moduleId: string) => {
+    setSelectedModule(mockModules.find(m => m.id === parseInt(moduleId)) || null);
+    setIsAddLessonModalOpen(true);
+  };
+
+  // Função para abrir o modal de informações do módulo
+  const handleModuleInfoClick = (moduleId: string) => {
+    setSelectedModule(mockModules.find(m => m.id === parseInt(moduleId)) || null);
+    // Buscar as aulas do módulo selecionado
+    fetchModuleLessons(moduleId);
+  };
+
+  // Função para buscar as aulas de um módulo
+  const fetchModuleLessons = async (moduleId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_BASE_URL}/modules/${moduleId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao carregar aulas do módulo');
+      }
+      
+      const data = await response.json();
+      
+      // Atualizar o módulo selecionado com as aulas
+      setSelectedModule(data);
+    } catch (err) {
+      console.error('Erro ao buscar aulas do módulo:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-gray-100">
       {/* Header Section */}
@@ -547,15 +592,8 @@ export function MembershipSetupPage() {
                 >
                   <FiUsers className="w-5 h-5" />
                 </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsUserModalOpen(true)}
-                  className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
-                  title="Adicionar Usuários"
-                >
-                  <FiUserPlus className="w-5 h-5" />
-                </motion.button>
+                
+                  
               </div>
             </div>
           </div>
@@ -773,44 +811,27 @@ export function MembershipSetupPage() {
             {/* Lista de módulos */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {mockModules.map((module) => (
-                <div 
-                  key={module.id} 
-                  className="p-4 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
-                  onClick={() => {
-                    setSelectedModule(module);
-                    setIsModuleDetailsModalOpen(true);
-                  }}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-gray-600 flex items-center justify-center text-xl">
-                      {module.icon}
+                <div key={module.id} className="bg-white p-4 rounded-lg shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium">{module.title}</h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleModuleInfoClick(module.id.toString())}
+                        className="p-1 text-gray-500 hover:text-gray-700"
+                      >
+                        <FiInfo className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleAddLessonClick(module.id.toString())}
+                        className="p-1 text-gray-500 hover:text-gray-700"
+                      >
+                        <FiPlus className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-white mb-1">{module.title}</h4>
-                      <p className="text-sm text-gray-300 mb-3">{module.description}</p>
-                      <div className="flex items-center justify-between text-xs text-gray-400">
-                        <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1">
-                            <FiBook className="w-3 h-3" /> {module.lessonsCount} aulas
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <FiCalendar className="w-3 h-3" /> {module.createdAt}
-                          </span>
-                        </div>
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => {
-                            setSelectedModule(module);
-                            setIsAddLessonModalOpen(true);
-                          }}
-                          className="flex items-center gap-1 text-green-500 hover:text-green-400 transition-colors"
-                        >
-                          <FiPlus className="w-4 h-4" />
-                          <span>Adicionar Aula</span>
-                        </motion.button>
-                      </div>
-                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500">{module.description}</p>
+                  <div className="mt-2 text-xs text-gray-400">
+                    {module.lessonsCount} aulas • Criado em {new Date(module.createdAt).toLocaleDateString('pt-BR')}
                   </div>
                 </div>
               ))}
@@ -829,15 +850,47 @@ export function MembershipSetupPage() {
               moduleTitle={selectedModule?.title || ''}
             />
             
-            <ModuleDetailsModal
-              isOpen={isModuleDetailsModalOpen}
-              onClose={() => setIsModuleDetailsModalOpen(false)}
-              module={selectedModule}
-              onLessonClick={(lesson) => {
-                console.log('Lesson clicked:', lesson);
-                // Here you would typically navigate to the lesson or perform some action
-              }}
-            />
+            {selectedModule && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg w-full max-w-md p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-medium">{selectedModule.title}</h2>
+                    <button
+                      onClick={() => setSelectedModule(null)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <FiX className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className="text-gray-600 mb-4">{selectedModule.description}</p>
+                  
+                  <div className="mb-4">
+                    <h3 className="font-medium mb-2">Aulas</h3>
+                    {selectedModule.lessons && selectedModule.lessons.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedModule.lessons.map((lesson) => (
+                          <div key={lesson.id} className="p-2 bg-gray-50 rounded">
+                            <div className="font-medium">{lesson.title}</div>
+                            <div className="text-sm text-gray-500">{lesson.description}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500">Nenhuma aula cadastrada neste módulo.</p>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setSelectedModule(null)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

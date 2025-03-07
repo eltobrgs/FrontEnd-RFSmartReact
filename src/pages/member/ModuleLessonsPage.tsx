@@ -44,8 +44,7 @@ export function ModuleLessonsPage() {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [expandedLessons, setExpandedLessons] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [lessonLoading, setLessonLoading] = useState(false);
+  const [, setLessonLoading] = useState(false);
   const [error, setError] = useState('');
   const [progressUpdateLoading, setProgressUpdateLoading] = useState(false);
   const videoRef = useRef<HTMLIFrameElement>(null);

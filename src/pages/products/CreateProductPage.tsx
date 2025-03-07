@@ -95,20 +95,24 @@ export function CreateProductPage() {
           return;
         }
         
+        const productToUpdate = {
+          name: productData.name,
+          description: productData.description,
+          price: parseFloat(productData.price),
+          category: productData.category,
+          image: productData.image || undefined,
+          contactWhatsapp: productData.contactWhatsapp || undefined
+        };
+        
+        console.log('Atualizando produto com contactWhatsapp:', productData.contactWhatsapp);
+        
         const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            name: productData.name,
-            description: productData.description,
-            price: parseFloat(productData.price),
-            category: productData.category,
-            image: productData.image || undefined,
-            contactWhatsapp: productData.contactWhatsapp || undefined
-          })
+          body: JSON.stringify(productToUpdate)
         });
         
         if (!response.ok) {
@@ -119,6 +123,7 @@ export function CreateProductPage() {
         navigate('/products');
       } else {
         // Criar novo produto - fluxo existente
+        console.log('Criando produto com contactWhatsapp:', productData.contactWhatsapp);
         localStorage.setItem('productCreationData', JSON.stringify(productData));
         navigate('/products/create/type');
       }
@@ -259,20 +264,20 @@ export function CreateProductPage() {
                   
                   <div>
                     <label htmlFor="contactWhatsapp" className="block text-sm font-medium text-gray-700 mb-1">
-                      WhatsApp para Pagamento *
+                      Link do WhatsApp para Pagamento *
                     </label>
                     <input
-                      type="tel"
+                      type="url"
                       id="contactWhatsapp"
                       name="contactWhatsapp"
                       value={productData.contactWhatsapp}
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      placeholder="Ex: 5511999999999 (apenas números)"
+                      placeholder="Ex: https://wa.me/5511999999999"
                       required
                     />
                     <p className="mt-1 text-sm text-gray-500">
-                      Número que será exibido para os compradores entrarem em contato para pagamento
+                      Link completo do WhatsApp que será exibido para os compradores entrarem em contato para pagamento
                     </p>
                   </div>
                   
