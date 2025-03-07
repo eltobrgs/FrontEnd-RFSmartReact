@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sidebar } from '../../components/Sidebar';
 import { FiArrowLeft } from 'react-icons/fi';
+import { API_BASE_URL } from '../../variables/api';
 
 export function CreateProductPage() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export function CreateProductPage() {
         return;
       }
       
-      const response = await fetch(`http://localhost:3000/api/products/${productId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -94,7 +95,7 @@ export function CreateProductPage() {
           return;
         }
         
-        const response = await fetch(`http://localhost:3000/api/products/${productId}`, {
+        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,

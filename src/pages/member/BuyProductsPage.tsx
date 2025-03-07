@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiX } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 
+// Importando a variável API_BASE_URL
+import { API_BASE_URL } from '../../variables/api';
 
 interface Product {
   id: string;
@@ -50,7 +52,7 @@ export function BuyProductsPage() {
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch('http://localhost:3000/api/products/available-to-buy', {
+        const response = await fetch(`${API_BASE_URL}/products/available-to-buy`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

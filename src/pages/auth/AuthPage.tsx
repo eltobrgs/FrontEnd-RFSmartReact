@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../variables/api';
 
 export function AuthPage() {
   const [activeForm, setActiveForm] = useState<'login' | 'register'>('login');
@@ -24,7 +25,7 @@ export function AuthPage() {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:3000/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ export function AuthPage() {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:3000/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -9,6 +9,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {FiInfo, FiArrowLeft, FiClock, FiBook, FiUser, FiStar, FiMessageSquare, FiHeart, FiShare2, FiX } from 'react-icons/fi';
 import { FaTelegram, FaWhatsapp, FaYoutube } from 'react-icons/fa';
 
+// Importando a variável API_BASE_URL
+import { API_BASE_URL } from '../../variables/api';
+
 interface Lesson {
   id: string;
   title: string;
@@ -90,16 +93,16 @@ export function MemberContentPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'modules' | 'community' | 'groups'>('modules');
 
-  // Buscar detalhes do produto
+  // Buscar dados do produto
   useEffect(() => {
-    const fetchProductDetails = async () => {
+    const fetchProductData = async () => {
       if (!productId) return;
       
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`http://localhost:3000/api/products/${productId}`, {
+        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -135,7 +138,7 @@ export function MemberContentPage() {
       }
     };
     
-    fetchProductDetails();
+    fetchProductData();
   }, [productId, navigate]);
 
   const handleModuleClick = (moduleId: string) => {
@@ -146,7 +149,7 @@ export function MemberContentPage() {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`http://localhost:3000/api/posts/${postId}/like`, {
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}/like`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

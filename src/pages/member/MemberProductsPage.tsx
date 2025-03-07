@@ -13,6 +13,9 @@ import { FiSearch, FiX } from 'react-icons/fi';
 // Navigation
 import { useNavigate } from 'react-router-dom';
 
+// Variables
+import { API_BASE_URL } from '../../variables/api';
+
 interface Product {
   id: string;
   name: string;
@@ -45,7 +48,7 @@ export function MemberProductsPage() {
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch('http://localhost:3000/api/products/my', {
+        const response = await fetch(`${API_BASE_URL}/products/my`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

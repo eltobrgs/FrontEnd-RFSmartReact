@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiCheck, FiSearch, FiUserPlus } from 'react-icons/fi';
+import { API_BASE_URL } from '../variables/api';
 
 interface User {
   id: string;
@@ -45,7 +46,7 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
         console.log('Buscando usuários sem acesso para o produto:', productId);
         
         // Buscar usuários sem acesso
-        const response = await fetch(`http://localhost:3000/api/products/${productId}/non-users`, {
+        const response = await fetch(`${API_BASE_URL}/products/${productId}/non-users`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -64,7 +65,7 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
         console.log('Buscando usuários com acesso para o produto:', productId);
         
         // Buscar usuários com acesso
-        const accessResponse = await fetch(`http://localhost:3000/api/products/${productId}/users`, {
+        const accessResponse = await fetch(`${API_BASE_URL}/products/${productId}/users`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -103,7 +104,7 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
 
       console.log('Concedendo acesso para o usuário:', userId, 'no produto:', productId);
       
-      const response = await fetch(`http://localhost:3000/api/products/${productId}/access/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${productId}/access/${userId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -123,7 +124,7 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
       setUsers(users.filter(user => user.id !== userId));
       
       // Buscar usuários com acesso novamente
-      const accessResponse = await fetch(`http://localhost:3000/api/products/${productId}/users`, {
+      const accessResponse = await fetch(`${API_BASE_URL}/products/${productId}/users`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -155,7 +156,7 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
 
       console.log('Revogando acesso para o usuário:', userId, 'no produto:', productId);
       
-      const response = await fetch(`http://localhost:3000/api/products/${productId}/access/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${productId}/access/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -174,7 +175,7 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
       setAccessUsers(accessUsers.filter(user => user.id !== userId));
       
       // Buscar usuários sem acesso novamente
-      const usersResponse = await fetch(`http://localhost:3000/api/products/${productId}/non-users`, {
+      const usersResponse = await fetch(`${API_BASE_URL}/products/${productId}/non-users`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

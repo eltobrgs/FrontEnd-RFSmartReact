@@ -4,6 +4,9 @@ import { motion } from 'framer-motion';
 import { FiBook, FiUsers, FiPackage } from 'react-icons/fi';
 import { Sidebar } from '../../components/Sidebar';
 
+// Variables
+import { API_BASE_URL } from '../../variables/api';
+
 interface ProductTypeCardProps {
   icon: React.ReactNode;
   title: string;
@@ -75,7 +78,7 @@ export function SelectProductTypePage() {
       // Criar o produto na API
       const token = localStorage.getItem('token');
       
-      const response = await fetch('http://localhost:3000/api/products', {
+      const response = await fetch(`${API_BASE_URL}/products`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

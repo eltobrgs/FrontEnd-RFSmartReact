@@ -14,6 +14,9 @@ import { FiSearch, FiX, FiUsers, FiEdit } from 'react-icons/fi';
 // Navigation
 import { useNavigate } from 'react-router-dom';
 
+// Importando a variável API_BASE_URL
+import { API_BASE_URL } from '../../variables/api';
+
 interface Product {
   id: string;
   name: string;
@@ -43,14 +46,14 @@ export function ProductsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
 
-  // Buscar produtos do produtor
+  // Buscar produtos do usuário
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch('http://localhost:3000/api/products/my', {
+        const response = await fetch(`${API_BASE_URL}/products/my`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -97,7 +100,7 @@ export function ProductsPage() {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`http://localhost:3000/api/products/${productId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

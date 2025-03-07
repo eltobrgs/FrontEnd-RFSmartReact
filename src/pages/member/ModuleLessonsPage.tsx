@@ -8,6 +8,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Icons
 import { FiArrowLeft, FiPlay, FiCheck, FiDownload, FiClock, FiChevronDown, FiChevronUp} from 'react-icons/fi';
 
+// Importando a variável API_BASE_URL
+import { API_BASE_URL } from '../../variables/api';
+
 interface Lesson {
   id: string;
   title: string;
@@ -41,20 +44,20 @@ export function ModuleLessonsPage() {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [expandedLessons, setExpandedLessons] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [lessonLoading, setLessonLoading] = useState(false);
   const [error, setError] = useState('');
   const [progressUpdateLoading, setProgressUpdateLoading] = useState(false);
   const videoRef = useRef<HTMLIFrameElement>(null);
 
-  // Buscar detalhes do módulo
+  // Buscar dados do módulo
   useEffect(() => {
-    const fetchModuleDetails = async () => {
-      if (!moduleId) return;
-      
+    const fetchModuleData = async () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`http://localhost:3000/api/modules/${moduleId}`, {
+        const response = await fetch(`${API_BASE_URL}/modules/${moduleId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -79,7 +82,7 @@ export function ModuleLessonsPage() {
           setExpandedLessons(initialExpandedState);
           
           // Buscar detalhes da primeira aula
-          fetchLessonDetails(data.lessons[0].id);
+          await fetchLessonData(data.lessons[0].id);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao carregar detalhes do módulo');
@@ -89,18 +92,17 @@ export function ModuleLessonsPage() {
       }
     };
     
-    fetchModuleDetails();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchModuleData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moduleId]);
 
-  // Buscar detalhes da aula quando selecionada
-  const fetchLessonDetails = async (lessonId: string) => {
-    if (!lessonId) return;
-    
+  // Buscar dados da lição
+  const fetchLessonData = async (lessonId: string) => {
+    setLessonLoading(true);
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`http://localhost:3000/api/lessons/${lessonId}`, {
+      const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -129,12 +131,14 @@ export function ModuleLessonsPage() {
       }
     } catch (err) {
       console.error('Erro ao buscar detalhes da aula:', err);
+    } finally {
+      setLessonLoading(false);
     }
   };
 
-  const handleLessonSelect = (lesson: Lesson) => {
+  const handleLessonSelect = async (lesson: Lesson) => {
     setSelectedLesson(lesson);
-    fetchLessonDetails(lesson.id);
+    await fetchLessonData(lesson.id);
   };
 
   const toggleLessonExpand = (lessonId: string) => {
@@ -151,7 +155,7 @@ export function ModuleLessonsPage() {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`http://localhost:3000/api/lessons/${lessonId}/progress`, {
+      const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}/progress`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

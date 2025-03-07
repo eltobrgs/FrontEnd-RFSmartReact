@@ -9,6 +9,7 @@ import { AddLessonModal } from '../../components/AddLessonModal';
 import { ModuleDetailsModal } from '../../components/ModuleDetailsModal';
 import { ProductAccessModal } from '../../components/ProductAccessModal';
 import { useParams, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../variables/api';
 
 interface User {
   id: number;
@@ -164,21 +165,12 @@ export function MembershipSetupPage() {
 
   // Buscar dados do produto
   useEffect(() => {
-    const fetchProductDetails = async () => {
-      if (!productId) {
-        setError('ID do produto não encontrado');
-        setLoading(false);
-        return;
-      }
-
+    const fetchProductData = async () => {
+      setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/');
-          return;
-        }
-
-        const response = await fetch(`http://localhost:3000/api/products/${productId}`, {
+        
+        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -192,7 +184,7 @@ export function MembershipSetupPage() {
         setProduct(data);
         
         // Buscar módulos do produto
-        const modulesResponse = await fetch(`http://localhost:3000/api/modules/product/${productId}`, {
+        const modulesResponse = await fetch(`${API_BASE_URL}/modules/product/${productId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -204,7 +196,7 @@ export function MembershipSetupPage() {
         }
         
         // Buscar posts do produto
-        const postsResponse = await fetch(`http://localhost:3000/api/posts/product/${productId}`, {
+        const postsResponse = await fetch(`${API_BASE_URL}/posts/product/${productId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -224,7 +216,7 @@ export function MembershipSetupPage() {
         }
         
         // Buscar grupos privados do produto
-        const groupsResponse = await fetch(`http://localhost:3000/api/privateGroups/product/${productId}`, {
+        const groupsResponse = await fetch(`${API_BASE_URL}/privateGroups/product/${productId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -252,7 +244,7 @@ export function MembershipSetupPage() {
         }
         
         // Buscar usuários com acesso ao produto
-        const usersResponse = await fetch(`http://localhost:3000/api/products/${productId}/users`, {
+        const usersResponse = await fetch(`${API_BASE_URL}/products/${productId}/users`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -289,7 +281,7 @@ export function MembershipSetupPage() {
       }
     };
 
-    fetchProductDetails();
+    fetchProductData();
   }, [productId, navigate]);
 
   // Função para conceder acesso a um usuário
@@ -298,7 +290,7 @@ export function MembershipSetupPage() {
       const token = localStorage.getItem('token');
       if (!token || !productId) return;
       
-      const response = await fetch(`http://localhost:3000/api/products/${productId}/access/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${productId}/access/${userId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -328,7 +320,7 @@ export function MembershipSetupPage() {
       const token = localStorage.getItem('token');
       if (!token || !productId) return;
       
-      const response = await fetch('http://localhost:3000/api/posts', {
+      const response = await fetch(`${API_BASE_URL}/posts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -374,7 +366,7 @@ export function MembershipSetupPage() {
       const token = localStorage.getItem('token');
       if (!token || !productId) return;
       
-      const response = await fetch('http://localhost:3000/api/modules', {
+      const response = await fetch(`${API_BASE_URL}/modules`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -421,7 +413,7 @@ export function MembershipSetupPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const response = await fetch('http://localhost:3000/api/lessons', {
+      const response = await fetch(`${API_BASE_URL}/lessons`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -458,7 +450,7 @@ export function MembershipSetupPage() {
       const token = localStorage.getItem('token');
       if (!token || !productId) return;
       
-      const response = await fetch('http://localhost:3000/api/privateGroups', {
+      const response = await fetch(`${API_BASE_URL}/privateGroups`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
