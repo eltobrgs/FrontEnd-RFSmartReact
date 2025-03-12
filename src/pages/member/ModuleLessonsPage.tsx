@@ -92,6 +92,7 @@ export function ModuleLessonsPage() {
     };
     
     fetchModuleData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Buscar dados da lição

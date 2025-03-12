@@ -5,41 +5,26 @@ import { FiX } from 'react-icons/fi';
 interface CourseCreateSectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit?: (moduleData: { title: string; description: string; icon: string }) => void;
+  onSubmit: (data: { title: string; description: string; icon: string; image: string }) => void;
 }
 
 export function CourseCreateSectionModal({ isOpen, onClose, onSubmit }: CourseCreateSectionModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('📚');
-  const [error, setError] = useState('');
+  const [image, setImage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!title || !description) {
-      setError('Por favor, preencha todos os campos obrigatórios');
-      return;
-    }
-    
-    if (onSubmit) {
-      onSubmit({
-        title,
-        description,
-        icon
-      });
-    }
-    
-    // Limpar o formulário
+    onSubmit({ title, description, icon, image });
+    // Reset form
     setTitle('');
     setDescription('');
     setIcon('📚');
-    setError('');
-    
-    onClose();
+    setImage('');
   };
 
-  const iconOptions = ['📚', '🎓', '📝', '📊', '💡', '🔍', '🧩', '🎯', '🚀', '💻', '📱', '🎨', '🎬', '🎤', '📈', '🔬', '🧪', '🔧', '🛠️', '📋'];
+  const icons = ['📚', '🎓', '🧠', '💡', '🔍', '🎯', '📊', '📈', '🛠️', '🧩', '🏆'];
 
   return (
     <AnimatePresence>
@@ -56,85 +41,101 @@ export function CourseCreateSectionModal({ isOpen, onClose, onSubmit }: CourseCr
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-8 bg-gray-800 rounded-xl shadow-xl overflow-hidden z-50 flex flex-col"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
-            <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-medium text-white">Criar Novo Módulo</h2>
-              <button
-                onClick={onClose}
-                className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-xl font-medium text-gray-900">Criar Novo Módulo</h2>
+                <button
+                  onClick={onClose}
+                  className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-              {error && (
-                <div className="bg-red-900/30 text-red-400 p-4 rounded-lg mb-6">
-                  {error}
-                </div>
-              )}
-              
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="icon" className="block text-sm font-medium text-gray-300 mb-1">
-                    Ícone
-                  </label>
-                  <div className="grid grid-cols-10 gap-2">
-                    {iconOptions.map((iconOption) => (
-                      <button
-                        key={iconOption}
-                        type="button"
-                        onClick={() => setIcon(iconOption)}
-                        className={`w-10 h-10 flex items-center justify-center text-xl rounded-lg ${
-                          icon === iconOption ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        } transition-colors`}
-                      >
-                        {iconOption}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">
-                    Título do Módulo *
+              <form onSubmit={handleSubmit} className="p-4">
+                <div className="mb-4">
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                    Título do Módulo
                   </label>
                   <input
                     type="text"
                     id="title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
-                    placeholder="Ex: Introdução ao Marketing Digital"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
+                    placeholder="Ex: Introdução ao Curso"
                     required
                   />
                 </div>
-                
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
-                    Descrição *
+
+                <div className="mb-4">
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                    Descrição
                   </label>
                   <textarea
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    rows={4}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
                     placeholder="Descreva o conteúdo deste módulo"
+                    rows={3}
                     required
                   />
                 </div>
-                
-                <div className="pt-4 flex justify-end">
-                  <motion.button
+
+                <div className="mb-4">
+                  <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+                    Link da Imagem
+                  </label>
+                  <input
+                    type="url"
+                    id="image"
+                    value={image}
+                    onChange={(e) => setImage(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black"
+                    placeholder="https://exemplo.com/imagem.jpg"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Insira um link para a imagem de capa do módulo
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ícone
+                  </label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {icons.map((iconOption) => (
+                      <button
+                        key={iconOption}
+                        type="button"
+                        onClick={() => setIcon(iconOption)}
+                        className={`w-10 h-10 text-xl flex items-center justify-center rounded-md ${
+                          icon === iconOption ? 'bg-green-100 border-2 border-green-500' : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                      >
+                        {iconOption}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 mt-6">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
                     type="submit"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    className="px-4 py-2 text-white bg-green-500 rounded-md hover:bg-green-600 transition-colors"
                   >
                     Criar Módulo
-                  </motion.button>
+                  </button>
                 </div>
               </form>
             </div>

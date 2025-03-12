@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { FiLogOut } from 'react-icons/fi';
 
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -37,6 +38,13 @@ export function Sidebar() {
     } else {
       navigate('/dashboard');
     }
+  };
+
+  const handleLogout = () => {
+    // Remover o token de autenticação
+    localStorage.removeItem('token');
+    // Redirecionar para a página de login
+    navigate('/login');
   };
 
   const producerMenuItems = [
@@ -119,7 +127,7 @@ export function Sidebar() {
                 <select
                   value={selectedRole}
                   onChange={(e) => handleRoleChange(e.target.value)}
-                  className="w-full p-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                  className="w-full p-2 rounded-lg border border-black-200 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-black"
                 >
                   <option value="producer">Produtor</option>
                   <option value="member">Membro</option>
@@ -145,6 +153,17 @@ export function Sidebar() {
                   ))}
                 </ul>
               </nav>
+              
+              {/* Logout button */}
+              <div className="p-4 border-t mt-auto">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <FiLogOut className="w-5 h-5" />
+                  <span className="font-medium">Sair</span>
+                </button>
+              </div>
             </motion.div>
           </>
         )}

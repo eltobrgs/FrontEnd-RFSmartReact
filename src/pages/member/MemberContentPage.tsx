@@ -219,7 +219,7 @@ export function MemberContentPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-8">
             <motion.button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/member/products')}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors"
@@ -374,20 +374,39 @@ export function MemberContentPage() {
         {/* Modules Tab */}
         {activeTab === 'modules' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {product.modules && product.modules.map((module) => (
+            {product.modules && product.modules.map((module, index) => (
               <motion.div
                 key={module.id}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleModuleClick(module.id)}
-                className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group"
+                className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group relative h-[400px]"
               >
-                <div className="aspect-w-16 aspect-h-9 relative">
+                <div className="h-full w-full relative">
                   <img
                     src={module.image || `https://source.unsplash.com/random/800x450/?${product.category.toLowerCase()}`}
                     alt={module.title}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover absolute inset-0"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                  
+                  <div className="absolute top-0 left-0 w-full p-4">
+                    <div className="text-xs font-bold text-white tracking-wider">
+                      CONTEÚDO FECHADO
+                    </div>
+                  </div>
+                  
+                  <div className="absolute bottom-0 left-0 w-full p-6 flex flex-col">
+                    <div className="text-xs font-bold text-white tracking-wider mb-2">
+                      MÓDULO {String(index + 1).padStart(2, '0')}
+                    </div>
+                    <h3 className="text-2xl font-bold text-white uppercase mb-6">{module.title}</h3>
+                    
+                    <div className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full self-start uppercase">
+                      MÓDULO {String(index + 1).padStart(2, '0')}
+                    </div>
+                  </div>
+                  
                   {module.progress !== undefined && (
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700">
                       <div
@@ -396,18 +415,6 @@ export function MemberContentPage() {
                       ></div>
                     </div>
                   )}
-                </div>
-                <div className="p-5">
-                  <h3 className="text-xl font-medium mb-2 group-hover:text-green-400 transition-colors">{module.title}</h3>
-                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">{module.description}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">{module.lessons?.length || 0} aulas</span>
-                    {module.progress !== undefined && (
-                      <span className="text-sm text-gray-500">
-                        {module.completedLessons || 0}/{module.totalLessons || module.lessons?.length || 0} concluídas
-                      </span>
-                    )}
-                  </div>
                 </div>
               </motion.div>
             ))}
