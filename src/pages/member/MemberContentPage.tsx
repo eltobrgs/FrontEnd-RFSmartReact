@@ -380,7 +380,7 @@ export function MemberContentPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleModuleClick(module.id)}
-                className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group relative h-[400px]"
+                className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group relative h-[500px]"
               >
                 <div className="h-full w-full relative">
                   <img
