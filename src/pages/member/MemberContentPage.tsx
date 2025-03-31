@@ -130,7 +130,7 @@ export function MemberContentPage() {
       setCurrentModuleIndex(currentModuleIndex - 1);
     }
   };
-  
+  //ao negocio chato
   // Handles de arrastar (drag) - apenas mobile
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50; // Limiar para considerar um swipe
