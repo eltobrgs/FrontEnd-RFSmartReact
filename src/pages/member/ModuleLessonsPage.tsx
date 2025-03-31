@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Icons
-import { FiArrowLeft, FiPlay, FiCheck, FiDownload, FiClock, FiChevronDown, FiChevronUp} from 'react-icons/fi';
+import { FiArrowLeft, FiPlay, FiCheck, FiDownload, FiClock, FiChevronDown, FiChevronUp, FiMenu, FiX } from 'react-icons/fi';
 
 // Importando a variável API_BASE_URL
 import { API_BASE_URL } from '../../variables/api';
@@ -48,6 +48,47 @@ export function ModuleLessonsPage() {
   const [error, setError] = useState('');
   const [progressUpdateLoading, setProgressUpdateLoading] = useState(false);
   const videoRef = useRef<HTMLIFrameElement>(null);
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | ''}>({message: '', type: ''});
+  // Estado para controlar a visibilidade da sidebar em telas menores
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Função para alternar a visibilidade da sidebar
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+  
+  // Verificar o tamanho da tela ao carregar e redimensionar
+  useEffect(() => {
+    const checkScreenSize = () => {
+      // Em telas menores, a sidebar começará fechada
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    
+    // Verificar no carregamento
+    checkScreenSize();
+    
+    // Verificar ao redimensionar
+    window.addEventListener('resize', checkScreenSize);
+    
+    // Limpar o event listener
+    return () => {
+      window.removeEventListener('resize', checkScreenSize);
+    };
+  }, []);
+
+  // Mostrar notificação
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({message, type});
+    
+    // Limpar notificação após 3 segundos
+    setTimeout(() => {
+      setNotification({message: '', type: ''});
+    }, 3000);
+  };
 
   // Buscar dados do módulo
   useEffect(() => {
@@ -128,6 +169,11 @@ export function ModuleLessonsPage() {
           lessons: updatedLessons
         });
       }
+      
+      // Em dispositivos móveis, fechar a sidebar após selecionar uma aula
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false);
+      }
     } catch (err) {
       console.error('Erro ao buscar detalhes da aula:', err);
     } finally {
@@ -154,6 +200,15 @@ export function ModuleLessonsPage() {
     try {
       const token = localStorage.getItem('token');
       
+      // Mostrar feedback visual de carregamento
+      if (selectedLesson && selectedLesson.id === lessonId) {
+        setSelectedLesson({
+          ...selectedLesson,
+          progress: progress,
+          completed: completed
+        });
+      }
+      
       const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}/progress`, {
         method: 'POST',
         headers: {
@@ -169,6 +224,9 @@ export function ModuleLessonsPage() {
       if (!response.ok) {
         throw new Error('Falha ao atualizar progresso');
       }
+      
+      const data = await response.json();
+      console.log('Progresso atualizado:', data);
       
       // Atualizar a aula na lista de aulas do módulo
       if (module) {
@@ -195,7 +253,8 @@ export function ModuleLessonsPage() {
           ...module,
           lessons: updatedLessons,
           progress: moduleProgress,
-          completedLessons
+          completedLessons,
+          totalLessons: module.lessons.length
         });
         
         // Atualizar a aula selecionada se for a mesma
@@ -207,15 +266,95 @@ export function ModuleLessonsPage() {
           });
         }
       }
+      
+      // Exibir mensagem de sucesso
+      showNotification('Progresso atualizado com sucesso!', 'success');
+      
     } catch (err) {
       console.error('Erro ao atualizar progresso:', err);
+      showNotification('Erro ao atualizar progresso. Tente novamente.', 'error');
+      
+      // Reverter o estado visual em caso de erro
+      if (module && selectedLesson && selectedLesson.id === lessonId) {
+        const originalLesson = module.lessons.find(l => l.id === lessonId);
+        if (originalLesson) {
+          setSelectedLesson(originalLesson);
+        }
+      }
     } finally {
       setProgressUpdateLoading(false);
     }
   };
 
   const markAsCompleted = async (lessonId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      setProgressUpdateLoading(true);
+      
+      // Primeiro tente usar a rota específica para marcar como concluído
+      const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        // Se falhar, use a rota de progresso como fallback
     await handleUpdateProgress(lessonId, 100, true);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('Aula marcada como concluída:', data);
+      
+      // Atualizar a UI após marcar como concluída
+      if (module) {
+        const updatedLessons = module.lessons.map(lesson => 
+          lesson.id === lessonId ? { ...lesson, progress: 100, completed: true } : lesson
+        );
+        
+        // Calcular o novo progresso do módulo
+        let completedLessons = 0;
+        updatedLessons.forEach(lesson => {
+          if (lesson.completed) {
+            completedLessons++;
+          }
+        });
+        
+        const moduleProgress = updatedLessons.length > 0 
+          ? Math.round((completedLessons / updatedLessons.length) * 100) 
+          : 0;
+        
+        setModule({
+          ...module,
+          lessons: updatedLessons,
+          progress: moduleProgress,
+          completedLessons,
+          totalLessons: module.lessons.length
+        });
+        
+        // Atualizar a aula selecionada se for a mesma
+        if (selectedLesson && selectedLesson.id === lessonId) {
+          setSelectedLesson({
+            ...selectedLesson,
+            progress: 100,
+            completed: true
+          });
+        }
+      }
+      
+      // Exibir mensagem de sucesso
+      showNotification('Aula marcada como concluída!', 'success');
+      
+    } catch (err) {
+      console.error('Erro ao marcar aula como concluída:', err);
+      showNotification('Erro ao marcar aula como concluída. Tente novamente.', 'error');
+    } finally {
+      setProgressUpdateLoading(false);
+    }
   };
 
   // Função para formatar a URL do vídeo para incorporação
@@ -291,8 +430,24 @@ export function ModuleLessonsPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+      {/* Notificação */}
+      <AnimatePresence>
+        {notification.message && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+              notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`}
+          >
+            <p className="text-white font-medium">{notification.message}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
       {/* Header */}
-      <header className="bg-gray-800 py-4 px-6 flex items-center justify-between">
+      <header className="bg-gray-800 py-4 px-6 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center space-x-4">
               <motion.button
             whileHover={{ scale: 1.1 }}
@@ -302,7 +457,7 @@ export function ModuleLessonsPage() {
               >
                 <FiArrowLeft className="w-5 h-5" />
               </motion.button>
-          <div>
+          <div className="hidden sm:block">
             <h1 className="text-xl font-medium">{module.title}</h1>
             {module.product && (
               <p className="text-sm text-gray-400">{module.product.name}</p>
@@ -310,21 +465,49 @@ export function ModuleLessonsPage() {
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
-          {module.progress !== undefined && (
-            <div className="text-sm text-gray-400">
+        <div className="flex items-center space-x-4">
+          {/* Botão para toggle da sidebar em dispositivos móveis */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={toggleSidebar}
+            className="md:hidden p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+          >
+            {sidebarOpen ? <FiX className="w-5 h-5" /> : <FiMenu className="w-5 h-5" />}
+          </motion.button>
+          
+          <div className="hidden sm:block text-sm text-gray-400">
               Progresso: {module.progress}% • {module.completedLessons || 0}/{module.totalLessons || module.lessons.length} aulas concluídas
             </div>
-          )}
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Lesson List */}
-        <div className="w-80 bg-gray-800 overflow-y-auto">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Sidebar - Lesson List - Retrátil em dispositivos móveis */}
+        <AnimatePresence initial={false}>
+          {sidebarOpen && (
+            <motion.div
+              initial={{ x: -280, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -280, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="absolute md:relative w-full md:w-80 bg-gray-800 overflow-y-auto z-10 h-full"
+              style={{ maxWidth: "100%", width: "280px" }}
+            >
           <div className="p-4">
-            <h2 className="text-lg font-medium mb-4">Aulas</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-medium">Aulas</h2>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={toggleSidebar}
+                    className="md:hidden p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </motion.button>
+                </div>
+                
               <div className="space-y-2">
               {module.lessons.map((lesson) => (
                 <div key={lesson.id} className="rounded-lg overflow-hidden">
@@ -387,10 +570,16 @@ export function ModuleLessonsPage() {
                           <p className="mb-2">{lesson.description}</p>
                           {lesson.progress !== undefined && (
                             <div className="h-1 bg-gray-700 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-green-500"
-                                style={{ width: `${lesson.progress}%` }}
-                              ></div>
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${lesson.progress}%` }}
+                                    transition={{ duration: 0.5, ease: "easeOut" }}
+                                    className={`h-full ${
+                                      lesson.completed 
+                                        ? 'bg-gradient-to-r from-green-500 to-green-400' 
+                                        : 'bg-gradient-to-r from-blue-500 to-blue-400'
+                                    }`}
+                                  ></motion.div>
               </div>
                           )}
           </motion.div>
@@ -401,12 +590,45 @@ export function ModuleLessonsPage() {
               ))}
             </div>
           </div>
-          </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto">
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* Área principal - Visível mesmo quando a sidebar está fechada */}
+        <div className="flex-1 overflow-y-auto ml-0 md:ml-0">
+          {/* Botão flutuante para abrir a sidebar em dispositivos móveis */}
+          {!sidebarOpen && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleSidebar}
+              className="md:hidden fixed bottom-6 left-6 z-30 p-3 rounded-full bg-green-500 text-white shadow-lg hover:bg-green-600 transition-colors"
+            >
+              <FiMenu className="w-6 h-6" />
+            </motion.button>
+          )}
+          
+          {/* Overlay para fechar a sidebar quando clicado fora */}
+          {sidebarOpen && (
+            <div
+              className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-0"
+              onClick={toggleSidebar}
+            ></div>
+          )}
+          
           {selectedLesson ? (
-            <div className="p-6">
+            <div className="p-4 md:p-6">
+              {/* Título da aula - Exibido apenas em telas menores quando a sidebar está fechada */}
+              <div className="sm:hidden mb-4">
+                <h1 className="text-xl font-medium">{module.title}</h1>
+                {module.product && (
+                  <p className="text-sm text-gray-400">{module.product.name}</p>
+                )}
+              </div>
+              
               {lessonLoading ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
@@ -414,12 +636,12 @@ export function ModuleLessonsPage() {
               ) : (
                 <>
                   <div className="mb-6">
-                    <h2 className="text-2xl font-medium mb-2">{selectedLesson.title}</h2>
+                    <h2 className="text-xl md:text-2xl font-medium mb-2">{selectedLesson.title}</h2>
                     <p className="text-gray-400">{selectedLesson.description}</p>
                   </div>
 
                   {selectedLesson.videoUrl && (
-                    <div className="aspect-video mb-6 bg-black rounded-lg overflow-hidden">
+                    <div className="aspect-video mb-6 bg-black rounded-lg overflow-hidden shadow-xl">
                       <iframe
                         ref={videoRef}
                         src={formatVideoUrl(selectedLesson.videoUrl)}
@@ -452,11 +674,25 @@ export function ModuleLessonsPage() {
                       className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                         selectedLesson.completed
                           ? 'bg-green-600 text-white cursor-default'
+                          : progressUpdateLoading
+                          ? 'bg-gray-600 text-white cursor-wait'
                           : 'bg-green-500 text-white hover:bg-green-600'
                       }`}
                     >
+                      {progressUpdateLoading ? (
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                      ) : selectedLesson.completed ? (
+                        <FiCheck className="w-5 h-5" />
+                      ) : (
                       <FiCheck className="w-5 h-5" />
-                      <span>{selectedLesson.completed ? 'Aula Concluída' : 'Marcar como Concluída'}</span>
+                      )}
+                      <span>
+                        {selectedLesson.completed 
+                          ? 'Aula Concluída' 
+                          : progressUpdateLoading 
+                          ? 'Processando...' 
+                          : 'Marcar como Concluída'}
+                      </span>
                     </motion.button>
                   </div>
                   
@@ -467,10 +703,15 @@ export function ModuleLessonsPage() {
                         <span className="text-sm text-gray-400">{selectedLesson.progress}%</span>
                       </div>
                       <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-green-500"
-                          style={{ width: `${selectedLesson.progress}%` }}
-                        ></div>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${selectedLesson.progress}%` }}
+                          transition={{ duration: 0.5, ease: "easeOut" }}
+                          className="h-full bg-gradient-to-r from-green-500 to-green-400"
+                          style={{ 
+                            boxShadow: selectedLesson.progress > 0 ? '0 0 8px rgba(34, 197, 94, 0.5)' : 'none'
+                          }}
+                        ></motion.div>
                       </div>
                     </div>
                   )}
@@ -478,8 +719,18 @@ export function ModuleLessonsPage() {
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-400">Selecione uma aula para começar</p>
+            <div className="flex items-center justify-center h-full p-4">
+              <div className="text-center">
+                <p className="text-gray-400 mb-4">Selecione uma aula para começar</p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={toggleSidebar}
+                  className="md:hidden px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  Ver lista de aulas
+                </motion.button>
+              </div>
           </div>
           )}
         </div>
