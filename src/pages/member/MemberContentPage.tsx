@@ -1,12 +1,12 @@
 // React core
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
 // Animations
-import { motion, AnimatePresence, useAnimation, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Icons
-import {FiInfo, FiArrowLeft, FiClock, FiBook, FiUser, FiStar, FiMessageSquare, FiHeart, FiShare2, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import {FiInfo, FiArrowLeft, FiClock, FiBook, FiUser, FiStar, FiMessageSquare, FiHeart, FiShare2, FiX } from 'react-icons/fi';
 import { FaTelegram, FaWhatsapp, FaYoutube } from 'react-icons/fa';
 
 // Importando a variável API_BASE_URL
@@ -92,66 +92,6 @@ export function MemberContentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'modules' | 'community' | 'groups'>('modules');
-  
-  // Estado para controlar o carrossel em dispositivos móveis
-  const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const controls = useAnimation();
-  const [isMobile, setIsMobile] = useState(false);
-  
-  // Detectar se é dispositivo móvel
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    // Verificar inicialmente
-    checkIfMobile();
-    
-    // Adicionar listener para mudanças de tamanho
-    window.addEventListener('resize', checkIfMobile);
-    
-    // Limpar listener
-    return () => {
-      window.removeEventListener('resize', checkIfMobile);
-    };
-  }, []);
-  
-  // Função para ir para o próximo módulo (apenas mobile)
-  const nextModule = () => {
-    if (product?.modules && currentModuleIndex < product.modules.length - 1) {
-      setCurrentModuleIndex(currentModuleIndex + 1);
-    }
-  };
-  
-  // Função para ir para o módulo anterior (apenas mobile)
-  const prevModule = () => {
-    if (currentModuleIndex > 0) {
-      setCurrentModuleIndex(currentModuleIndex - 1);
-    }
-  };
-  //ao negocio chato
-  // Handles de arrastar (drag) - apenas mobile
-  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const threshold = 50; // Limiar para considerar um swipe
-    
-    if (info.offset.x < -threshold) {
-      nextModule();
-    } else if (info.offset.x > threshold) {
-      prevModule();
-    }
-  };
-  
-  // Observar mudanças no índice atual para animar o carrossel (apenas mobile)
-  useEffect(() => {
-    if (isMobile && product?.modules && carouselRef.current) {
-      const moduleWidth = carouselRef.current.offsetWidth;
-      controls.start({
-        x: -currentModuleIndex * moduleWidth,
-        transition: { type: "spring", stiffness: 300, damping: 30 }
-      });
-    }
-  }, [currentModuleIndex, controls, product?.modules, isMobile]);
 
   // Buscar dados do produto
   useEffect(() => {
@@ -433,139 +373,22 @@ export function MemberContentPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Modules Tab */}
         {activeTab === 'modules' && (
-          <>
-            {/* Versão Mobile (Carrossel) */}
-            <div className={`md:hidden relative`}>
-              {/* Section Title with Counter */}
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Módulos do Curso</h2>
-                {product?.modules && product.modules.length > 1 && (
-                  <div className="text-sm text-gray-400">
-                    {currentModuleIndex + 1} / {product.modules.length}
-                  </div>
-                )}
-              </div>
-              
-              {/* Carousel Navigation Buttons */}
-              {product?.modules && product.modules.length > 1 && (
-                <>
-                  <button 
-                    onClick={prevModule}
-                    disabled={currentModuleIndex === 0}
-                    className={`absolute left-0 top-1/2 z-10 -translate-y-1/2 p-2 rounded-full bg-gray-800 bg-opacity-80 ${
-                      currentModuleIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'
-                    }`}
-                  >
-                    <FiChevronLeft className="w-6 h-6" />
-                  </button>
-                  
-                  <button 
-                    onClick={nextModule}
-                    disabled={currentModuleIndex === product.modules.length - 1}
-                    className={`absolute right-0 top-1/2 z-10 -translate-y-1/2 p-2 rounded-full bg-gray-800 bg-opacity-80 ${
-                      currentModuleIndex === product.modules.length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-700'
-                    }`}
-                  >
-                    <FiChevronRight className="w-6 h-6" />
-                  </button>
-                </>
-              )}
-              
-              {/* Carousel */}
-              <div className="overflow-hidden" ref={carouselRef}>
-                <motion.div
-                  className="flex"
-                  drag="x"
-                  dragConstraints={{ left: 0, right: 0 }}
-                  onDragEnd={handleDragEnd}
-                  animate={controls}
-                >
-                  {product?.modules && product.modules.map((module, index) => (
-                    <motion.div
-                      key={module.id}
-                      className="w-full flex-shrink-0 px-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleModuleClick(module.id)}
-                    >
-                      <div className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group relative h-[350px]">
-                        <div className="h-full w-full relative">
-                          <img
-                            src={module.image || `https://source.unsplash.com/random/800x450/?${product.category.toLowerCase()}`}
-                            alt={module.title}
-                            className="w-full h-full object-cover absolute inset-0"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-                          
-                          <div className="absolute top-0 left-0 w-full p-4">
-                            <div className="text-xs font-bold text-white tracking-wider">
-                              CONTEÚDO FECHADO
-                            </div>
-                          </div>
-                          
-                          <div className="absolute bottom-0 left-0 w-full p-6 flex flex-col">
-                            <div className="text-xs font-bold text-white tracking-wider mb-2">
-                              MÓDULO {String(index + 1).padStart(2, '0')}
-                            </div>
-                            <h3 className="text-xl font-bold text-white uppercase mb-4">{module.title}</h3>
-                            <p className="text-sm text-gray-300 mb-6 line-clamp-2">{module.description}</p>
-                            
-                            <div className="flex items-center justify-between">
-                              <div className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full self-start uppercase">
-                                MÓDULO {String(index + 1).padStart(2, '0')}
-                              </div>
-                              
-                              {module.lessons && (
-                                <div className="text-xs text-gray-300">
-                                  {module.lessons.length} aula{module.lessons.length !== 1 ? 's' : ''}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {module.progress !== undefined && (
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700">
-                              <div
-                                className="h-full bg-green-500"
-                                style={{ width: `${module.progress}%` }}
-                              ></div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </div>
-              
-              {/* Dots Navigation */}
-              {product?.modules && product.modules.length > 1 && (
-                <div className="flex justify-center mt-6 gap-2">
-                  {product.modules.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentModuleIndex(index)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        currentModuleIndex === index
-                          ? 'bg-green-500 w-4'
-                          : 'bg-gray-600 hover:bg-gray-500'
-                      }`}
-                      aria-label={`Go to slide ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
+          <div className="w-full">
+            {/* Section Title */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Módulos do Curso</h2>
             </div>
             
-            {/* Versão Desktop (Grid) */}
-            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {product?.modules && product.modules.map((module, index) => (
+            {/* Grid Container com Scroll Horizontal */}
+            <div className="overflow-x-auto pb-4">
+              <div className="grid grid-cols-3 gap-4 min-w-max md:min-w-0 md:w-full">
+                {product?.modules && product.modules.map((module, index) => (
               <motion.div
                 key={module.id}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleModuleClick(module.id)}
-                className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group relative h-[500px]"
+                className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group relative w-[160px] md:w-full aspect-[3/5] md:aspect-[3/4]"
               >
                 <div className="h-full w-full relative">
                   <img
@@ -581,14 +404,22 @@ export function MemberContentPage() {
                     </div>
                   </div>
                   
-                  <div className="absolute bottom-0 left-0 w-full p-6 flex flex-col">
-                    <div className="text-xs font-bold text-white tracking-wider mb-2">
+                      <div className="absolute bottom-0 left-0 w-full p-4 flex flex-col">
+                        <div className="text-xs font-bold text-white tracking-wider mb-1">
                       MÓDULO {String(index + 1).padStart(2, '0')}
                     </div>
-                    <h3 className="text-2xl font-bold text-white uppercase mb-6">{module.title}</h3>
+                        <h3 className="text-lg font-bold text-white uppercase mb-2 line-clamp-2">{module.title}</h3>
                     
+                        <div className="flex items-center justify-between mt-auto">
                     <div className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full self-start uppercase">
                       MÓDULO {String(index + 1).padStart(2, '0')}
+                          </div>
+                          
+                          {module.lessons && (
+                            <div className="text-xs text-gray-300">
+                              {module.lessons.length} aula{module.lessons.length !== 1 ? 's' : ''}
+                            </div>
+                          )}
                     </div>
                   </div>
                   
@@ -603,8 +434,9 @@ export function MemberContentPage() {
                 </div>
               </motion.div>
             ))}
+              </div>
+            </div>
           </div>
-          </>
         )}
 
         {/* Community Tab */}
