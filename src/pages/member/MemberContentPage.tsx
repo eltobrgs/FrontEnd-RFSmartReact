@@ -132,7 +132,7 @@ export function MemberContentPage() {
   };
   
   // Handles de arrastar (drag) - apenas mobile
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50; // Limiar para considerar um swipe
     
     if (info.offset.x < -threshold) {
@@ -560,50 +560,50 @@ export function MemberContentPage() {
             {/* Versão Desktop (Grid) */}
             <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {product?.modules && product.modules.map((module, index) => (
-                <motion.div
-                  key={module.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleModuleClick(module.id)}
-                  className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group relative h-[500px]"
-                >
-                  <div className="h-full w-full relative">
-                    <img
-                      src={module.image || `https://source.unsplash.com/random/800x450/?${product.category.toLowerCase()}`}
-                      alt={module.title}
-                      className="w-full h-full object-cover absolute inset-0"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-                    
-                    <div className="absolute top-0 left-0 w-full p-4">
-                      <div className="text-xs font-bold text-white tracking-wider">
-                        CONTEÚDO FECHADO
-                      </div>
+              <motion.div
+                key={module.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleModuleClick(module.id)}
+                className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer group relative h-[500px]"
+              >
+                <div className="h-full w-full relative">
+                  <img
+                    src={module.image || `https://source.unsplash.com/random/800x450/?${product.category.toLowerCase()}`}
+                    alt={module.title}
+                    className="w-full h-full object-cover absolute inset-0"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                  
+                  <div className="absolute top-0 left-0 w-full p-4">
+                    <div className="text-xs font-bold text-white tracking-wider">
+                      CONTEÚDO FECHADO
                     </div>
-                    
-                    <div className="absolute bottom-0 left-0 w-full p-6 flex flex-col">
-                      <div className="text-xs font-bold text-white tracking-wider mb-2">
-                        MÓDULO {String(index + 1).padStart(2, '0')}
-                      </div>
-                      <h3 className="text-2xl font-bold text-white uppercase mb-6">{module.title}</h3>
-                      
-                      <div className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full self-start uppercase">
-                        MÓDULO {String(index + 1).padStart(2, '0')}
-                      </div>
-                    </div>
-                    
-                    {module.progress !== undefined && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700">
-                        <div
-                          className="h-full bg-green-500"
-                          style={{ width: `${module.progress}%` }}
-                        ></div>
-                      </div>
-                    )}
                   </div>
-                </motion.div>
-              ))}
-            </div>
+                  
+                  <div className="absolute bottom-0 left-0 w-full p-6 flex flex-col">
+                    <div className="text-xs font-bold text-white tracking-wider mb-2">
+                      MÓDULO {String(index + 1).padStart(2, '0')}
+                    </div>
+                    <h3 className="text-2xl font-bold text-white uppercase mb-6">{module.title}</h3>
+                    
+                    <div className="bg-green-500 text-white text-xs font-bold py-1 px-3 rounded-full self-start uppercase">
+                      MÓDULO {String(index + 1).padStart(2, '0')}
+                    </div>
+                  </div>
+                  
+                  {module.progress !== undefined && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700">
+                      <div
+                        className="h-full bg-green-500"
+                        style={{ width: `${module.progress}%` }}
+                      ></div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
           </>
         )}
 
