@@ -268,7 +268,7 @@ export function ModuleLessonsPage() {
       }
       
       // Exibir mensagem de sucesso
-      showNotification('Progresso atualizado com sucesso!', 'success');
+      showNotification(completed ? 'Progresso atualizado com sucesso!' : 'Aula desmarcada com sucesso!', 'success');
       
     } catch (err) {
       console.error('Erro ao atualizar progresso:', err);
@@ -286,13 +286,23 @@ export function ModuleLessonsPage() {
     }
   };
 
-  const markAsCompleted = async (lessonId: string) => {
+  // Substituindo a função markAsCompleted por toggleLessonCompletion
+  const toggleLessonCompletion = async (lessonId: string) => {
+    // Verificar o estado atual da aula
+    const isCurrentlyCompleted = selectedLesson?.completed || false;
+    
     try {
       const token = localStorage.getItem('token');
       
       setProgressUpdateLoading(true);
       
-      // Primeiro tente usar a rota específica para marcar como concluído
+      // Se já estiver concluída, desmarca usando a API de progresso
+      if (isCurrentlyCompleted) {
+        await handleUpdateProgress(lessonId, 0, false);
+        return;
+      }
+      
+      // Caso contrário, marca como concluída
       const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}/complete`, {
         method: 'POST',
         headers: {
@@ -303,7 +313,7 @@ export function ModuleLessonsPage() {
       
       if (!response.ok) {
         // Se falhar, use a rota de progresso como fallback
-    await handleUpdateProgress(lessonId, 100, true);
+        await handleUpdateProgress(lessonId, 100, true);
         return;
       }
       
@@ -350,8 +360,8 @@ export function ModuleLessonsPage() {
       showNotification('Aula marcada como concluída!', 'success');
       
     } catch (err) {
-      console.error('Erro ao marcar aula como concluída:', err);
-      showNotification('Erro ao marcar aula como concluída. Tente novamente.', 'error');
+      console.error('Erro ao atualizar estado da aula:', err);
+      showNotification('Erro ao atualizar estado da aula. Tente novamente.', 'error');
     } finally {
       setProgressUpdateLoading(false);
     }
@@ -654,11 +664,11 @@ export function ModuleLessonsPage() {
                   )}
                   
                   <div className="flex flex-wrap gap-4 mb-8">
-                  {selectedLesson.materialUrl && (
+                    {selectedLesson.materialUrl && (
                       <a
-                      href={selectedLesson.materialUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                        href={selectedLesson.materialUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="flex items-center space-x-2 px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
                       >
                         <FiDownload className="w-5 h-5" />
@@ -669,11 +679,11 @@ export function ModuleLessonsPage() {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => markAsCompleted(selectedLesson.id)}
-                      disabled={progressUpdateLoading || selectedLesson.completed}
+                      onClick={() => toggleLessonCompletion(selectedLesson.id)}
+                      disabled={progressUpdateLoading}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                         selectedLesson.completed
-                          ? 'bg-green-600 text-white cursor-default'
+                          ? 'bg-yellow-600 text-white hover:bg-yellow-700'
                           : progressUpdateLoading
                           ? 'bg-gray-600 text-white cursor-wait'
                           : 'bg-green-500 text-white hover:bg-green-600'
@@ -682,13 +692,13 @@ export function ModuleLessonsPage() {
                       {progressUpdateLoading ? (
                         <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
                       ) : selectedLesson.completed ? (
-                        <FiCheck className="w-5 h-5" />
+                        <FiX className="w-5 h-5" />
                       ) : (
-                      <FiCheck className="w-5 h-5" />
+                        <FiCheck className="w-5 h-5" />
                       )}
                       <span>
                         {selectedLesson.completed 
-                          ? 'Aula Concluída' 
+                          ? 'Desmarcar Aula' 
                           : progressUpdateLoading 
                           ? 'Processando...' 
                           : 'Marcar como Concluída'}
