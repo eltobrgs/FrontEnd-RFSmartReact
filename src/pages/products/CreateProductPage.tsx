@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Sidebar } from '../../components/Sidebar';
 import { FiArrowLeft } from 'react-icons/fi';
 import { API_BASE_URL } from '../../variables/api';
+import { ImageUpload } from '../../components/ImageUpload';
 
 export function CreateProductPage() {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ export function CreateProductPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   
   const [productData, setProductData] = useState({
     name: '',
@@ -73,6 +76,31 @@ export function CreateProductPage() {
     setProductData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (file: File | null) => {
+    setImageFile(file);
+    setRemoveImage(false);
+    
+    // Se houver um arquivo, vamos criar um DataURL para ele
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (dataUrl) {
+          // Salvar a URL de dados no localStorage para uso posterior
+          localStorage.setItem('productImageDataUrl', dataUrl);
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      localStorage.removeItem('productImageDataUrl');
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setRemoveImage(true);
+    setProductData(prev => ({ ...prev, image: '' }));
+  };
+
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -95,24 +123,26 @@ export function CreateProductPage() {
           return;
         }
         
-        const productToUpdate = {
-          name: productData.name,
-          description: productData.description,
-          price: parseFloat(productData.price),
-          category: productData.category,
-          image: productData.image || undefined,
-          contactWhatsapp: productData.contactWhatsapp || undefined
-        };
+        // Usar FormData para enviar dados e arquivo
+        const formData = new FormData();
+        formData.append('name', productData.name);
+        formData.append('description', productData.description);
+        formData.append('price', productData.price);
+        formData.append('category', productData.category);
+        formData.append('contactWhatsapp', productData.contactWhatsapp || '');
         
-        console.log('Atualizando produto com contactWhatsapp:', productData.contactWhatsapp);
+        if (imageFile) {
+          formData.append('image', imageFile);
+        } else if (removeImage) {
+          formData.append('removeImage', 'true');
+        }
         
         const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
           },
-          body: JSON.stringify(productToUpdate)
+          body: formData
         });
         
         if (!response.ok) {
@@ -122,9 +152,14 @@ export function CreateProductPage() {
         // Navegar de volta para a lista de produtos
         navigate('/products');
       } else {
-        // Criar novo produto - fluxo existente
-        console.log('Criando produto com contactWhatsapp:', productData.contactWhatsapp);
-        localStorage.setItem('productCreationData', JSON.stringify(productData));
+        // Criar novo produto - primeiro salvamos os dados localmente
+        // Aqui não salvamos mais apenas os metadados, mas sim um indicador
+        // de que há uma imagem armazenada como DataURL
+        localStorage.setItem('productCreationData', JSON.stringify({
+          ...productData,
+          hasImage: !!imageFile // flag para indicar que há uma imagem a ser enviada
+        }));
+        
         navigate('/products/create/type');
       }
     } catch (err) {
@@ -245,20 +280,17 @@ export function CreateProductPage() {
                   </div>
                   
                   <div>
-                    <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
-                      URL da Imagem
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Imagem do Produto
                     </label>
-                    <input
-                      type="url"
-                      id="image"
-                      name="image"
-                      value={productData.image}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
-                      placeholder="https://exemplo.com/imagem.jpg"
+                    <ImageUpload 
+                      onChange={handleImageChange}
+                      preview={productData.image}
+                      onRemove={handleRemoveImage}
+                      label="Fazer upload da imagem do produto" 
                     />
                     <p className="mt-1 text-sm text-gray-500">
-                      Deixe em branco para usar uma imagem padrão
+                      Tamanho máximo: 5MB. Formatos: JPG, PNG, WebP
                     </p>
                   </div>
                   

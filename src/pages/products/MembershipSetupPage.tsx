@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiArrowLeft, FiCalendar, FiMessageCircle, FiUsers, FiPlus, FiX, FiCheck, FiInfo } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiMessageCircle, FiUsers, FiPlus, FiX, FiCheck, FiInfo, FiEdit, FiTrash2, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 import { useState, useEffect } from 'react';
 import { CreatePostModal } from '../../components/CreatePostModal';
 import { CourseCreateSectionModal } from '../../components/CourseCreateSectionModal';
+import { CourseCreateLessonModal } from '../../components/CourseCreateLessonModal';
 import { PrivateChannelModal } from '../../components/PrivateChannelModal';
-import { AddLessonModal } from '../../components/AddLessonModal';
 import { ProductAccessModal } from '../../components/ProductAccessModal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../variables/api';
@@ -79,8 +79,9 @@ interface Module {
   icon: string;
   image?: string;
   lessonsCount: number;
-  createdAt: string;
   lessons?: Lesson[];
+  createdAt: string;
+  isLoadingLessons?: boolean;
 }
 
 interface Group {
@@ -98,6 +99,8 @@ interface Channel {
   membersCount: number;
   isConnected: boolean;
   createdAt: string;
+  inviteLink?: string;
+  description?: string;
 }
 
 interface Product {
@@ -141,6 +144,8 @@ interface ApiGroup {
   memberCount: number;
   createdAt: string;
   isLocked: boolean;
+  inviteLink?: string;
+  description?: string;
 }
 
 interface ApiUser {
@@ -150,6 +155,14 @@ interface ApiUser {
   avatar: string;
   status: string;
   lastAccessed?: string;
+}
+
+// Adicionar interfaces para confirmações de exclusão
+interface DeleteConfirmation {
+  type: 'module' | 'lesson' | 'post' | 'channel';
+  id: string;
+  title: string;
+  isOpen: boolean;
 }
 
 export function MembershipSetupPage() {
@@ -166,21 +179,241 @@ export function MembershipSetupPage() {
   const [isCreateSectionModalOpen, setIsCreateSectionModalOpen] = useState(false);
   const [isPrivateChannelModalOpen, setIsPrivateChannelModalOpen] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<'telegram' | 'whatsapp' | 'youtube'>('telegram');
-  const [isAddLessonModalOpen, setIsAddLessonModalOpen] = useState(false);
+  const [isCreateLessonModalOpen, setIsCreateLessonModalOpen] = useState(false);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [users, setUsers] = useState<User[]>(mockUsers);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
+  const [isModuleDetailsModalOpen, setIsModuleDetailsModalOpen] = useState(false);
 
   // Estados para controle do módulo selecionado e modal
   const [mockModules, setMockModules] = useState<Module[]>([]);
 
+  // Adicionar estados para confirmações de exclusão
+  const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation>({
+    type: 'module',
+    id: '',
+    title: '',
+    isOpen: false
+  });
+  const [isEditModuleModalOpen, setIsEditModuleModalOpen] = useState(false);
+  const [editingModule, setEditingModule] = useState<Module | null>(null);
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const [isEditPostModalOpen, setIsEditPostModalOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+
+  // Adicionar estado para controlar edição do nome do produto
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
+
+  // Adicionar estado para controlar upload da logo
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+
+  // Função para criar um grupo privado
+  const handleCreatePrivateGroup = async (groupData: { name: string; description: string; type: string; inviteLink?: string }) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !productId) return;
+      
+      console.log('[DEBUG handleCreatePrivateGroup] Criando grupo privado:', {
+        ...groupData,
+        productId,
+        memberCount: 0,
+        isLocked: false,
+        inviteLink: groupData.inviteLink
+      });
+      
+      const response = await fetch(`${API_BASE_URL}/privateGroups`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...groupData,
+          productId,
+          memberCount: 0,
+          isLocked: false,
+          inviteLink: groupData.inviteLink
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('[DEBUG handleCreatePrivateGroup] Resposta de erro:', errorData);
+        throw new Error(`Falha ao criar grupo privado: ${response.status}`);
+      }
+      
+      const newGroup = await response.json();
+      console.log('[DEBUG handleCreatePrivateGroup] Grupo privado criado com sucesso:', newGroup);
+      
+      if (groupData.type === 'TELEGRAM' || groupData.type === 'WHATSAPP' || groupData.type === 'YOUTUBE') {
+        // Adicionar o novo canal à lista
+        setMockChannels([
+          ...mockChannels,
+          {
+            id: newGroup.id,
+            name: newGroup.name,
+            platform: groupData.type.toLowerCase() as 'telegram' | 'whatsapp' | 'youtube',
+            membersCount: 0,
+            isConnected: true,
+            createdAt: new Date(newGroup.createdAt).toLocaleDateString('pt-BR'),
+            inviteLink: groupData.inviteLink,
+            description: groupData.description
+          }
+        ]);
+      } else {
+        // Adicionar o novo grupo à lista
+        setMockGroups([
+          ...mockGroups,
+          {
+            id: newGroup.id,
+            name: newGroup.name,
+            type: 'group',
+            membersCount: 0,
+            createdAt: new Date(newGroup.createdAt).toLocaleDateString('pt-BR')
+          }
+        ]);
+      }
+      
+      // Fechar o modal
+      setIsPrivateChannelModalOpen(false);
+    } catch (err) {
+      console.error('[DEBUG handleCreatePrivateGroup] Erro ao criar grupo privado:', err);
+      // Mostrar mensagem de erro
+    }
+  };
+
+  // Função para editar um canal privado
+  const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  const [isEditChannelModalOpen, setIsEditChannelModalOpen] = useState(false);
+
+  const handleEditChannelClick = (channel: Channel) => {
+    setEditingChannel(channel);
+    setSelectedPlatform(channel.platform);
+    setIsEditChannelModalOpen(true);
+  };
+
+  const handleUpdateChannel = async (groupData: { name: string; description: string; type: string; inviteLink?: string }) => {
+    try {
+      if (!editingChannel) return;
+
+      const token = localStorage.getItem('token');
+      if (!token || !productId) return;
+      
+      const response = await fetch(`${API_BASE_URL}/privateGroups/${editingChannel.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: groupData.name,
+          description: groupData.description,
+          type: groupData.type,
+          inviteLink: groupData.inviteLink,
+          isLocked: !editingChannel.isConnected
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao atualizar canal privado');
+      }
+      
+      const updatedChannel = await response.json();
+      
+      // Atualizar o canal na lista
+      setMockChannels(prevChannels => 
+        prevChannels.map(channel => 
+          channel.id === editingChannel.id
+            ? {
+                ...channel,
+                name: groupData.name,
+                description: groupData.description,
+                inviteLink: groupData.inviteLink,
+                isConnected: !updatedChannel.isLocked
+              }
+            : channel
+        )
+      );
+      
+      // Fechar o modal
+      setIsEditChannelModalOpen(false);
+      setEditingChannel(null);
+      
+      alert('Canal atualizado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao atualizar canal privado:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao atualizar canal privado');
+    }
+  };
+
+  // Função para excluir um canal privado
+  const handleDeleteChannelClick = (channelId: number) => {
+    setDeleteConfirmation({
+      type: 'channel',
+      id: channelId.toString(),
+      title: mockChannels.find(c => c.id === channelId)?.name || 'Canal',
+      isOpen: true
+    });
+  };
+
+  const handleDeleteChannel = async (channelId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await fetch(`${API_BASE_URL}/privateGroups/${channelId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao excluir canal privado');
+      }
+      
+      // Remover o canal da lista
+      setMockChannels(prevChannels => prevChannels.filter(channel => channel.id.toString() === channelId ? false : true));
+      
+      alert('Canal excluído com sucesso!');
+    } catch (err) {
+      console.error('Erro ao excluir canal privado:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao excluir canal privado');
+    }
+  };
+
   // Buscar dados do produto
   useEffect(() => {
+    if (productId) {
+      fetchProductData();
+    }
+    
+    // Adiciona um evento para quando a página receber foco novamente
+    const handleFocus = () => {
+      if (productId) {
+        console.log('[DEBUG] Página recebeu foco, atualizando dados');
+        fetchGroups(); // Busca os grupos novamente quando a página recebe foco
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [productId]);
+
+  // Função para buscar os dados do produto
     const fetchProductData = async () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
+        if (!token || !productId) return;
+
+        console.log('[DEBUG fetchProductData] Buscando dados do produto:', productId);
         
         const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
           headers: {
@@ -204,21 +437,29 @@ export function MembershipSetupPage() {
         
         if (modulesResponse.ok) {
           const modulesData = await modulesResponse.json();
-          console.log('Módulos carregados do backend:', modulesData);
           
           // Formatar os módulos para o formato esperado
-          const formattedModules = modulesData.map((module: Module) => ({
-            id: module.id.toString(), // Garantir que o ID seja string
+        const formattedModules = modulesData.map((module: {
+          id: string;
+          title: string;
+          description: string;
+          icon: string;
+          image?: string;
+          lessonsCount: number;
+          createdAt: string;
+          lessons?: any[];
+        }) => ({
+          id: module.id.toString(),
             title: module.title,
             description: module.description,
             icon: 'default',
             image: module.image || '',
             lessonsCount: module.lessons?.length || 0,
             createdAt: new Date(module.createdAt).toLocaleDateString('pt-BR'),
-            lessons: module.lessons || []
+          lessons: module.lessons || [],
+          isLoadingLessons: false
           }));
           
-          console.log('Módulos formatados:', formattedModules);
           setMockModules(formattedModules);
         }
         
@@ -246,43 +487,25 @@ export function MembershipSetupPage() {
           setMockPosts(formattedPosts);
         }
         
-        // Buscar grupos privados do produto
-        const groupsResponse = await fetch(`${API_BASE_URL}/privateGroups/product/${productId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (groupsResponse.ok) {
-          const groupsData = await groupsResponse.json();
-          
-          // Formatar os grupos para o formato esperado
-          const formattedGroups = groupsData
-            .filter((group: ApiGroup) => group.type !== 'TELEGRAM' && group.type !== 'WHATSAPP' && group.type !== 'YOUTUBE')
-            .map((group: ApiGroup) => ({
-              id: group.id,
-              name: group.name,
-              type: 'group',
-              membersCount: group.memberCount || 0,
-              createdAt: new Date(group.createdAt).toLocaleDateString('pt-BR')
-            }));
-          
-          setMockGroups(formattedGroups);
-          
-          // Formatar os canais para o formato esperado
-          const formattedChannels = groupsData
-            .filter((group: ApiGroup) => group.type === 'TELEGRAM' || group.type === 'WHATSAPP' || group.type === 'YOUTUBE')
-            .map((group: ApiGroup) => ({
-              id: group.id,
-              name: group.name,
-              platform: group.type.toLowerCase() as 'telegram' | 'whatsapp' | 'youtube',
-              membersCount: group.memberCount || 0,
-              isConnected: !group.isLocked,
-              createdAt: new Date(group.createdAt).toLocaleDateString('pt-BR')
-            }));
-          
-          setMockChannels(formattedChannels);
-        }
+      // Buscar grupos e canais - sempre atualiza, mesmo se o resto já tiver sido carregado
+      await fetchGroups();
+      
+      // Buscar usuários
+      await fetchUsers();
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar detalhes do produto');
+      console.error('Erro ao buscar detalhes do produto:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para buscar usuários do produto
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !productId) return;
         
         // Buscar usuários com acesso ao produto
         const usersResponse = await fetch(`${API_BASE_URL}/products/${productId}/users`, {
@@ -308,17 +531,73 @@ export function MembershipSetupPage() {
           setUsers(formattedUsers);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar detalhes do produto');
-        console.error('Erro ao buscar detalhes do produto:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    if (productId) {
-      fetchProductData();
+      console.error('Erro ao buscar usuários do produto:', err);
     }
-  }, [productId]);
+  };
+  
+  // Função para buscar grupos e canais do produto
+  const fetchGroups = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !productId) {
+        console.error('[DEBUG fetchGroups] Token ou productId não encontrado');
+        return;
+      }
+      
+      console.log(`[DEBUG fetchGroups] Buscando grupos para o produto: ${productId}`);
+      
+      // Buscar grupos privados do produto
+      const groupsResponse = await fetch(`${API_BASE_URL}/privateGroups/product/${productId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log(`[DEBUG fetchGroups] Status da resposta: ${groupsResponse.status}`);
+      
+      if (groupsResponse.ok) {
+        const groupsData = await groupsResponse.json();
+        console.log(`[DEBUG fetchGroups] Grupos recebidos da API:`, groupsData);
+        
+        // Formatar os grupos para o formato esperado
+        const formattedGroups = groupsData
+          .filter((group: ApiGroup) => group.type !== 'TELEGRAM' && group.type !== 'WHATSAPP' && group.type !== 'YOUTUBE')
+          .map((group: ApiGroup) => ({
+            id: group.id,
+            name: group.name,
+            type: 'group',
+            membersCount: group.memberCount || 0,
+            createdAt: new Date(group.createdAt).toLocaleDateString('pt-BR')
+          }));
+        
+        console.log(`[DEBUG fetchGroups] Grupos formatados:`, formattedGroups);
+        setMockGroups(formattedGroups);
+        
+        // Formatando os canais vindos da API
+        const formattedChannels = groupsData
+          .filter((group: ApiGroup) => group.type === 'TELEGRAM' || group.type === 'WHATSAPP' || group.type === 'YOUTUBE')
+          .map((group: ApiGroup & { inviteLink?: string; description?: string }) => ({
+            id: group.id.toString(),
+            name: group.name,
+            platform: group.type.toLowerCase() as 'telegram' | 'whatsapp' | 'youtube',
+            membersCount: group.memberCount,
+            status: group.isLocked ? 'Locked' : 'Open',
+            isConnected: !group.isLocked,
+            createdAt: new Date(group.createdAt).toLocaleDateString('pt-BR'),
+            inviteLink: group.inviteLink,
+            description: group.description
+          }));
+        
+        console.log(`[DEBUG fetchGroups] Canais formatados:`, formattedChannels);
+        setMockChannels(formattedChannels);
+      } else {
+        const errorText = await groupsResponse.text().catch(() => 'Não foi possível ler o erro');
+        console.error(`[DEBUG fetchGroups] Erro na resposta: ${errorText}`);
+      }
+    } catch (err) {
+      console.error('[DEBUG fetchGroups] Erro ao buscar grupos e canais:', err);
+    }
+  };
 
   // Função para conceder acesso a um usuário
   const handleGrantAccess = async (userId: number) => {
@@ -397,197 +676,48 @@ export function MembershipSetupPage() {
   };
   
   // Função para criar um novo módulo
-  const handleCreateModule = async (moduleData: { title: string; description: string; icon: string; image: string }) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token || !productId) return;
-      
-      const response = await fetch(`${API_BASE_URL}/modules`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...moduleData,
-          productId
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao criar módulo');
-      }
-      
-      const newModule = await response.json();
-      
-      // Adicionar o novo módulo à lista
-      setMockModules([
-        ...mockModules,
-        {
-          id: newModule.id,
-          title: newModule.title,
-          description: newModule.description,
-          icon: moduleData.icon,
-          image: moduleData.image,
-          lessonsCount: 0,
-          createdAt: new Date(newModule.createdAt).toLocaleDateString('pt-BR')
-        }
-      ]);
-      
-      // Fechar o modal
-      setIsCreateSectionModalOpen(false);
-    } catch (err) {
-      console.error('Erro ao criar módulo:', err);
-      // Mostrar mensagem de erro
-    }
+  const handleCreateModule = async () => {
+    setEditingModule(null);
+    setSelectedModule(null);
+    setIsCreateSectionModalOpen(true);
+  };
+
+  const handleEditModuleClick = (module: Module) => {
+    setEditingModule(module);
+    setIsEditModuleModalOpen(true);
   };
   
-  // Função para abrir o modal de adicionar aula
+  // Função para lidar com o sucesso na criação/edição de módulo
+  const handleModuleSuccess = async () => {
+    await fetchProductData();
+  };
+
+  // Função para adicionar uma aula a um módulo específico
   const handleAddLessonClick = (moduleId: string) => {
-    console.log('Abrindo modal para adicionar aula ao módulo:', moduleId);
-    
-    const foundModule = mockModules.find(m => m.id === moduleId);
-    if (foundModule) {
-      console.log('Módulo encontrado:', foundModule);
-      setSelectedModule(foundModule);
-      setIsAddLessonModalOpen(true);
-    } else {
-      console.error('Módulo não encontrado com ID:', moduleId);
-      alert('Erro: Módulo não encontrado');
+    const module = mockModules.find(m => m.id === moduleId);
+    if (module) {
+      setSelectedModule(module);
+      setEditingLesson(null);
+      setIsCreateLessonModalOpen(true);
     }
   };
 
-  // Função para adicionar uma aula a um módulo
-  const handleAddLesson = async (lessonData: { title: string; description: string; videoUrl: string; materialUrl?: string }) => {
-    try {
-      if (!selectedModule) {
-        throw new Error('Nenhum módulo selecionado');
-      }
-      
-      console.log('Tentando adicionar aula ao módulo:', selectedModule);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token não encontrado');
-      }
-      
-      const moduleId = selectedModule.id;
-      
-      console.log('Dados da aula a serem enviados:', {
-        moduleId,
-        ...lessonData
-      });
-      
-      const response = await fetch(`${API_BASE_URL}/lessons`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          moduleId,
-          title: lessonData.title,
-          description: lessonData.description,
-          videoUrl: lessonData.videoUrl || '',
-          materialUrl: lessonData.materialUrl || ''
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Erro da API:', errorData);
-        throw new Error(`Falha ao adicionar aula: ${response.status}`);
-      }
-      
-      const newLesson = await response.json();
-      console.log('Nova aula criada:', newLesson);
-      
-      // Atualizar o módulo na lista
-      setMockModules(prevModules => 
-        prevModules.map(module => 
-          module.id === moduleId
-            ? {
-                ...module,
-                lessonsCount: (module.lessonsCount || 0) + 1,
-                lessons: [...(module.lessons || []), newLesson]
-              }
-            : module
-        )
-      );
-      
-      // Fechar o modal
-      handleCloseAddLesson();
-      
-      // Atualizar a lista de aulas do módulo
-      await fetchModuleLessons(moduleId);
-      
-      // Mostrar mensagem de sucesso
-      alert('Aula adicionada com sucesso!');
-    } catch (err) {
-      console.error('Erro ao adicionar aula:', err);
-      alert(err instanceof Error ? err.message : 'Erro ao adicionar aula');
+  // Função para editar uma aula
+  const handleEditLessonClick = (lesson: Lesson, moduleId: string) => {
+    const module = mockModules.find(m => m.id === moduleId);
+    if (module) {
+      setSelectedModule(module);
+      setEditingLesson(lesson);
+      setIsCreateLessonModalOpen(true);
     }
   };
-  
-  // Função para criar um grupo privado
-  const handleCreatePrivateGroup = async (groupData: { name: string; description: string; type: string }) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token || !productId) return;
-      
-      const response = await fetch(`${API_BASE_URL}/privateGroups`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...groupData,
-          productId,
-          memberCount: 0,
-          isLocked: false
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao criar grupo privado');
-      }
-      
-      const newGroup = await response.json();
-      
-      if (groupData.type === 'TELEGRAM' || groupData.type === 'WHATSAPP' || groupData.type === 'YOUTUBE') {
-        // Adicionar o novo canal à lista
-        setMockChannels([
-          ...mockChannels,
-          {
-            id: newGroup.id,
-            name: newGroup.name,
-            platform: groupData.type.toLowerCase() as 'telegram' | 'whatsapp' | 'youtube',
-            membersCount: 0,
-      isConnected: true,
-            createdAt: new Date(newGroup.createdAt).toLocaleDateString('pt-BR')
-          }
-        ]);
-      } else {
-        // Adicionar o novo grupo à lista
-        setMockGroups([
-          ...mockGroups,
-          {
-            id: newGroup.id,
-            name: newGroup.name,
-            type: 'group',
-            membersCount: 0,
-            createdAt: new Date(newGroup.createdAt).toLocaleDateString('pt-BR')
-          }
-        ]);
-      }
-      
-      // Fechar o modal
-      setIsPrivateChannelModalOpen(false);
-    } catch (err) {
-      console.error('Erro ao criar grupo privado:', err);
-      // Mostrar mensagem de erro
+
+  // Função para lidar com o sucesso na criação/edição de aula
+  const handleLessonSuccess = async () => {
+    if (selectedModule) {
+      await fetchModuleLessons(selectedModule.id);
     }
+    await fetchProductData();
   };
   
   // Dados mockados para posts
@@ -606,19 +736,31 @@ export function MembershipSetupPage() {
     const foundModule = mockModules.find(m => m.id === moduleId);
     if (foundModule) {
       setSelectedModule(foundModule);
-      setIsAddLessonModalOpen(false); // Garante que o modal de adicionar aula esteja fechado
+      setIsCreateLessonModalOpen(false); // Garante que o modal de adicionar aula esteja fechado
+      
+      // Atualiza o estado para mostrar que este módulo está carregando aulas
+      setMockModules(prevModules => 
+        prevModules.map(module => 
+          module.id === moduleId
+            ? { ...module, isLoadingLessons: true }
+            : module
+        )
+      );
+      
       fetchModuleLessons(moduleId);
+      setIsModuleDetailsModalOpen(true); // Abre o modal de detalhes
     }
   };
 
   // Função para fechar o modal de informações
   const handleCloseModuleInfo = () => {
     setSelectedModule(null);
+    setIsModuleDetailsModalOpen(false);
   };
 
   // Função para fechar o modal de adicionar aula
   const handleCloseAddLesson = () => {
-    setIsAddLessonModalOpen(false);
+    setIsCreateLessonModalOpen(false);
     setSelectedModule(null);
   };
 
@@ -631,6 +773,15 @@ export function MembershipSetupPage() {
       if (!token) {
         throw new Error('Token não encontrado');
       }
+      
+      // Indica que está carregando aulas deste módulo
+      setMockModules(prevModules => 
+        prevModules.map(module => 
+          module.id === moduleId
+            ? { ...module, isLoadingLessons: true }
+            : module
+        )
+      );
       
       const response = await fetch(`${API_BASE_URL}/modules/${moduleId}`, {
         headers: {
@@ -652,7 +803,8 @@ export function MembershipSetupPage() {
             ? {
                 ...module,
                 lessons: moduleData.lessons || [],
-                lessonsCount: moduleData.lessons?.length || 0
+                lessonsCount: moduleData.lessons?.length || 0,
+                isLoadingLessons: false
               }
             : module
         )
@@ -663,14 +815,387 @@ export function MembershipSetupPage() {
         setSelectedModule({
           ...selectedModule,
           lessons: moduleData.lessons || [],
-          lessonsCount: moduleData.lessons?.length || 0
+          lessonsCount: moduleData.lessons?.length || 0,
+          isLoadingLessons: false
         });
       }
+      
+      // Finaliza o carregamento deste módulo
+      setMockModules(prevModules => 
+        prevModules.map(module => 
+          module.id === moduleId
+            ? { ...module, isLoadingLessons: false }
+            : module
+        )
+      );
       
       return moduleData;
     } catch (err) {
       console.error('Erro ao buscar aulas do módulo:', err);
+      
+      // Atualiza o estado para mostrar que o carregamento falhou
+      setMockModules(prevModules => 
+        prevModules.map(module => 
+          module.id === moduleId
+            ? { ...module, isLoadingLessons: false }
+            : module
+        )
+      );
+      
       return null;
+    }
+  };
+
+  useEffect(() => {
+    // Carregar automaticamente as aulas de todos os módulos ao montar o componente
+    const loadAllModuleLessons = async () => {
+      if (mockModules.length === 0) return;
+      
+      // Marca todos módulos como carregando
+      setMockModules(prevModules => 
+        prevModules.map(module => {
+          return { ...module, isLoadingLessons: true };
+        })
+      );
+      
+      // Busca as aulas para cada módulo
+      for (const module of mockModules) {
+        await fetchModuleLessons(module.id);
+      }
+    };
+    
+    loadAllModuleLessons();
+  }, [mockModules.length]);
+
+  // Função para excluir um módulo
+  const handleDeleteModule = async (moduleId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/modules/${moduleId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao excluir módulo');
+      }
+      
+      // Atualizar a lista de módulos
+      setMockModules(prevModules => prevModules.filter(module => module.id !== moduleId));
+      
+      // Fechar o modal de confirmação
+      setDeleteConfirmation({
+        type: 'module',
+        id: '',
+        title: '',
+        isOpen: false
+      });
+      
+      alert('Módulo excluído com sucesso!');
+    } catch (err) {
+      console.error('Erro ao excluir módulo:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao excluir módulo');
+    }
+  };
+  
+  // Função para excluir uma aula
+  const handleDeleteLesson = async (lessonId: string, moduleId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao excluir aula');
+      }
+      
+      // Atualizar o módulo na lista
+      setMockModules(prevModules => 
+        prevModules.map(module => 
+          module.id === moduleId
+            ? {
+                ...module,
+                lessonsCount: Math.max(0, (module.lessonsCount || 0) - 1),
+                lessons: module.lessons?.filter(lesson => lesson.id !== lessonId) || []
+              }
+            : module
+        )
+      );
+      
+      // Se este é o módulo selecionado, atualizá-lo também
+      if (selectedModule?.id === moduleId) {
+        setSelectedModule({
+          ...selectedModule,
+          lessonsCount: Math.max(0, (selectedModule.lessonsCount || 0) - 1),
+          lessons: selectedModule.lessons?.filter(lesson => lesson.id !== lessonId) || []
+        });
+      }
+      
+      // Fechar o modal de confirmação
+      setDeleteConfirmation({
+        type: 'lesson',
+        id: '',
+        title: '',
+        isOpen: false
+      });
+      
+      alert('Aula excluída com sucesso!');
+    } catch (err) {
+      console.error('Erro ao excluir aula:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao excluir aula');
+    }
+  };
+  
+  // Função para excluir um post
+  const handleDeletePost = async (postId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao excluir post');
+      }
+      
+      // Atualizar a lista de posts
+      setMockPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+      
+      // Fechar o modal de confirmação
+      setDeleteConfirmation({
+        type: 'post',
+        id: '',
+        title: '',
+        isOpen: false
+      });
+      
+      alert('Post excluído com sucesso!');
+    } catch (err) {
+      console.error('Erro ao excluir post:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao excluir post');
+    }
+  };
+  
+  // Função para editar um módulo
+  const handleEditModule = async (moduleData: { title: string; description: string; icon: string; image: string }) => {
+    if (!editingModule) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/modules/${editingModule.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(moduleData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao atualizar módulo');
+      }
+      
+      const updatedModule = await response.json();
+      
+      // Atualizar o módulo na lista
+      setMockModules(prevModules => 
+        prevModules.map(module => 
+          module.id === editingModule.id
+            ? {
+                ...module,
+                title: updatedModule.title,
+                description: updatedModule.description,
+                icon: moduleData.icon,
+                image: moduleData.image
+              }
+            : module
+        )
+      );
+      
+      // Fechar o modal
+      setIsEditModuleModalOpen(false);
+      setEditingModule(null);
+      
+      alert('Módulo atualizado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao atualizar módulo:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao atualizar módulo');
+    }
+  };
+  
+  // Função para editar um post
+  const handleEditPost = async (postData: { title: string; description: string; space: string; tags: string[] }) => {
+    if (!editingPost) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/posts/${editingPost.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(postData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao atualizar post');
+      }
+      
+      const updatedPost = await response.json();
+      
+      // Atualizar o post na lista
+      setMockPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.id === editingPost.id
+            ? {
+                ...post,
+                title: updatedPost.title,
+                description: updatedPost.description,
+                space: updatedPost.space || 'Geral'
+              }
+            : post
+        )
+      );
+      
+      // Fechar o modal
+      setIsEditPostModalOpen(false);
+      setEditingPost(null);
+      
+      alert('Post atualizado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao atualizar post:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao atualizar post');
+    }
+  };
+
+  // Função para atualizar o nome do produto
+  const handleUpdateProductName = async () => {
+    if (!product || !editedName || editedName === product.name) {
+      setIsEditingName(false);
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: editedName })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao atualizar nome do produto');
+      }
+      
+      // Atualizar o produto no estado local
+      setProduct(prev => prev ? { ...prev, name: editedName } : null);
+      setIsEditingName(false);
+      
+      alert('Nome do produto atualizado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao atualizar nome do produto:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao atualizar nome do produto');
+    }
+  };
+  
+  // Inicializar o estado de edição do nome quando o produto é carregado
+  useEffect(() => {
+    if (product) {
+      setEditedName(product.name);
+    }
+  }, [product]);
+
+  // Função para fazer upload da nova logo do produto
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validação básica do arquivo
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido.');
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      alert('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+    
+    setLogoFile(file);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !productId) return;
+      
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao atualizar a imagem do produto');
+      }
+      
+      const updatedProduct = await response.json();
+      
+      // Atualizar o produto no estado local - corrigindo o erro de tipo
+      setProduct(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          image: updatedProduct.image
+        };
+      });
+      
+      alert('Imagem do produto atualizada com sucesso!');
+    } catch (err) {
+      console.error('Erro ao atualizar imagem:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao atualizar imagem');
+    } finally {
+      setLogoFile(null);
     }
   };
 
@@ -746,16 +1271,35 @@ export function MembershipSetupPage() {
                   {product?.name || 'Carregando produto...'}
                 </h2>
             <div className="text-center">
-              <div className="border-2 border-dashed border-gray-600 rounded-lg p-12 hover:border-green-500 transition-colors cursor-pointer">
-                <p className="text-gray-400 mb-2">sua logo aqui</p>
-                <motion.button
+              <label className="block">
+                <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 hover:border-green-500 transition-colors cursor-pointer relative">
+                  {product?.image ? (
+                    <div className="relative">
+                      <img 
+                        src={product.image} 
+                        alt={product.name} 
+                        className="max-w-full max-h-36 mb-3 rounded-lg"
+                      />
+                      <p className="text-gray-400 text-sm mb-2">Alterar imagem do produto</p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 mb-2">Adicionar imagem do produto</p>
+                  )}
+                  <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
-                >
-                  Fazer upload
-                </motion.button>
+                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm inline-block"
+                  >
+                    {logoFile ? 'Enviando...' : 'Selecionar imagem'}
+                  </motion.div>
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/png, image/jpeg, image/webp" 
+                    onChange={handleLogoUpload}
+                  />
               </div>
+              </label>
             </div>
           </div>
         </div>
@@ -791,41 +1335,74 @@ export function MembershipSetupPage() {
         {/* Product Name Section */}
         <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 mb-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 w-full">
+              {isEditingName ? (
+                <>
               <input
                 type="text"
-                defaultValue="Nome do produto"
-                className="bg-transparent text-xl font-medium text-white border-b border-transparent hover:border-gray-600 focus:border-green-500 focus:outline-none transition-colors px-2 py-1"
-              />
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    className="bg-transparent text-xl font-medium text-white border-b border-gray-600 focus:border-green-500 focus:outline-none transition-colors px-2 py-1 w-full"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="text-gray-400 hover:text-green-500 transition-colors"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                  />
-                </svg>
+                      onClick={handleUpdateProductName}
+                      className="text-green-500 hover:text-green-400 transition-colors"
+                    >
+                      <FiCheck className="w-5 h-5" />
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setIsEditingName(false);
+                        if (product) setEditedName(product.name);
+                      }}
+                      className="text-red-500 hover:text-red-400 transition-colors"
+                    >
+                      <FiX className="w-5 h-5" />
               </motion.button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="bg-transparent text-xl font-medium text-white px-2 py-1 w-full">
+                    {product?.name || ''}
+                  </h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsEditingName(true)}
+                    className="text-gray-400 hover:text-green-500 transition-colors"
+                  >
+                    <FiEdit className="w-5 h-5" />
+                  </motion.button>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Dynamic Content Section */}
+        {/* Tab Content */}
         {activeTab === 'community' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Group Management Panel */}
             <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-              <h3 className="text-lg font-medium text-white mb-6">Gerenciar grupos</h3>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-medium text-white">Gerenciar grupos</h3>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => fetchGroups()}
+                  className="p-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                  title="Atualizar grupos"
+                >
+                  <FiRefreshCw className="w-4 h-4" />
+                </motion.button>
+              </div>
               <div className="flex flex-col gap-4 mb-6">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -882,7 +1459,31 @@ export function MembershipSetupPage() {
               <div className="space-y-4">
                 {mockPosts.map((post) => (
                   <div key={post.id} className="p-4 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer">
-                    <h4 className="font-medium text-white mb-1">{post.title}</h4>
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-medium text-white mb-1">{post.title}</h4>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingPost(post);
+                            setIsEditPostModalOpen(true);
+                          }}
+                          className="p-1 text-gray-300 hover:text-blue-400"
+                        >
+                          <FiEdit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmation({
+                            type: 'post',
+                            id: post.id.toString(),
+                            title: post.title,
+                            isOpen: true
+                          })}
+                          className="p-1 text-gray-300 hover:text-red-400"
+                        >
+                          <FiTrash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                     <p className="text-sm text-gray-300 mb-3">{post.description}</p>
                     <div className="flex items-center justify-between text-xs text-gray-400">
                       <div className="flex items-center gap-4">
@@ -904,124 +1505,195 @@ export function MembershipSetupPage() {
                 onClose={() => setIsCreatePostModalOpen(false)}
                     onSubmit={handleCreatePost}
               />
+              
+              {/* Modal de edição de post */}
+              <CreatePostModal
+                isOpen={isEditPostModalOpen}
+                onClose={() => setIsEditPostModalOpen(false)}
+                onSubmit={handleEditPost}
+                initialValues={editingPost ? {
+                  title: editingPost.title,
+                  description: editingPost.description,
+                  space: editingPost.space,
+                  tags: []
+                } : undefined}
+                isEditing={true}
+              />
             </div>
           </div>
         ) : activeTab === 'courses' ? (
-          <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-white">Módulos do curso</h3>
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Módulos do Curso</h3>
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setIsCreateSectionModalOpen(true)}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleCreateModule()}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600 transition-colors"
               >
-                Criar Módulo
+                <FiPlus className="h-4 w-4" />
+                Adicionar Módulo
               </motion.button>
             </div>
 
-            {/* Lista de módulos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {mockModules.length === 0 ? (
+              <div className="text-center py-10 bg-white rounded-lg border border-gray-200">
+                <div className="flex justify-center">
+                  <FiInfo className="h-10 w-10 text-gray-400" />
+                </div>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhum módulo criado</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Comece criando seu primeiro módulo para o curso.
+                </p>
+                <div className="mt-6">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                    onClick={() => handleCreateModule()}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
+              >
+                    Criar módulo
+              </motion.button>
+            </div>
+              </div>
+            ) : (
+              // Lista de Módulos
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
               {mockModules.map((module) => (
-                <div key={module.id} className="bg-white p-4 rounded-lg shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-gray-900">{module.title}</h3>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleModuleInfoClick(module.id)}
-                        className="p-1 text-gray-500 hover:text-gray-700"
+                  <div key={module.id} className="bg-gray-800 rounded-xl shadow-md border border-gray-700 overflow-hidden hover:border-green-500 transition-all duration-300">
+                    {/* Imagem do Módulo */}
+                    <div className="h-40 bg-gray-700 relative">
+                      {module.image ? (
+                        <img 
+                          src={module.image} 
+                          alt={module.title} 
+                          className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-700">
+                          <FiInfo className="h-10 w-10 text-gray-500" />
+                        </div>
+                      )}
+                      
+                      {/* Menu de opções */}
+                      <div className="absolute top-2 right-2 flex space-x-1">
+                      <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleEditModuleClick(module)}
+                          className="p-1.5 rounded-full bg-gray-800 text-gray-300 hover:text-green-400 hover:bg-gray-900 transition-all shadow-lg"
+                        >
+                          <FiEdit className="h-4 w-4" />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setDeleteConfirmation({
+                          type: 'module',
+                          id: module.id,
+                          title: module.title,
+                          isOpen: true
+                        })}
+                          className="p-1.5 rounded-full bg-gray-800 text-gray-300 hover:text-red-400 hover:bg-gray-900 transition-all shadow-lg"
                       >
-                        <FiInfo className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleAddLessonClick(module.id)}
-                        className="p-1 text-gray-500 hover:text-gray-700"
-                      >
-                        <FiPlus className="w-4 h-4" />
-                      </button>
+                          <FiTrash2 className="h-4 w-4" />
+                      </motion.button>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-700">{module.description}</p>
-                  <div className="mt-2 text-xs text-gray-600">
-                    {module.lessonsCount} aulas • Criado em {new Date(module.createdAt).toLocaleDateString('pt-BR')}
-                  </div>
-                </div>
-              ))}
+                    
+                    <div className="p-5">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-medium text-white text-lg">{module.title}</h3>
             </div>
 
-            {/* Modais */}
-            <CourseCreateSectionModal
-              isOpen={isCreateSectionModalOpen}
-              onClose={() => setIsCreateSectionModalOpen(false)}
-              onSubmit={handleCreateModule}
-            />
-
-            {/* Modal de Adicionar Aula */}
-            <AddLessonModal
-              isOpen={isAddLessonModalOpen}
-              onClose={handleCloseAddLesson}
-              moduleTitle={selectedModule?.title || ''}
-              onSubmit={(lessonData) => {
-                console.log('Dados da aula recebidos do modal:', lessonData);
-                console.log('Módulo selecionado ao enviar:', selectedModule);
-                handleAddLesson(lessonData);
-              }}
-            />
-            
-            {/* Modal de Informações do Módulo */}
-            {selectedModule && !isAddLessonModalOpen && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg w-full max-w-md p-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-medium text-gray-900">
-                      Módulo: {selectedModule.title}
-                    </h2>
-                    <button
-                      onClick={handleCloseModuleInfo}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <FiX className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <p className="text-gray-700 mb-4">{selectedModule.description}</p>
-                  
-                  <div className="mb-4">
-                    <h3 className="font-medium mb-2 text-gray-900">Aulas</h3>
-                    {selectedModule.lessons && selectedModule.lessons.length > 0 ? (
-                      <div className="space-y-2">
-                        {selectedModule.lessons.map((lesson) => (
-                          <div key={lesson.id} className="p-2 bg-gray-50 rounded">
-                            <div className="font-medium text-gray-900">{lesson.title}</div>
-                            <div className="text-sm text-gray-700">{lesson.description}</div>
-                            {lesson.videoUrl && (
-                              <div className="text-xs text-gray-600 mt-1">
-                                <a href={lesson.videoUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                  Link do vídeo
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                      <p className="text-sm text-gray-400 mb-4 line-clamp-2">{module.description}</p>
+                      
+                      <div className="flex justify-between items-center text-xs text-gray-400 mb-4">
+                        <span className="bg-gray-700 px-3 py-1 rounded-full">
+                          {module.isLoadingLessons ? (
+                            <div className="flex items-center gap-1">
+                              <div className="h-3 w-3 rounded-full border-2 border-t-transparent border-green-400 animate-spin"></div>
+                              <span>Carregando...</span>
+                            </div>
+                          ) : module.lessonsCount === 0 ? (
+                            'Sem aulas'
+                          ) : (
+                            `${module.lessonsCount} aulas`
+                          )}
+                        </span>
+                        <span>{module.createdAt}</span>
                       </div>
-                    ) : (
-                      <p className="text-gray-700">Nenhuma aula cadastrada neste módulo.</p>
-                    )}
-                  </div>
-                  
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleCloseModuleInfo}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                    >
-                      Fechar
-                    </button>
+                      
+                      {/* Botões para adicionar aula ou ver detalhes */}
+                      <div className="space-y-3">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                              onClick={() => handleAddLessonClick(module.id)}
+                          className="w-full py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                          <FiPlus className="h-4 w-4" /> Adicionar aula
+                        </motion.button>
+                        
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleModuleInfoClick(module.id)}
+                          className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                          <FiInfo className="h-4 w-4" /> Ver detalhes do módulo
+                        </motion.button>
+                              </div>
                   </div>
                 </div>
+                ))}
               </div>
             )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Botão para adicionar novo canal/grupo */}
+            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 flex flex-col justify-center items-center">
+              <h3 className="text-lg font-medium text-white mb-6">Adicionar canal privado</h3>
+              <div className="space-y-4 w-full">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setSelectedPlatform('telegram');
+                    setIsPrivateChannelModalOpen(true);
+                  }}
+                  className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm flex items-center justify-center"
+                >
+                  <FiPlus className="mr-2" /> Canal do Telegram
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setSelectedPlatform('whatsapp');
+                    setIsPrivateChannelModalOpen(true);
+                  }}
+                  className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm flex items-center justify-center"
+                >
+                  <FiPlus className="mr-2" /> Grupo de WhatsApp
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setSelectedPlatform('youtube');
+                    setIsPrivateChannelModalOpen(true);
+                  }}
+                  className="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm flex items-center justify-center"
+                >
+                  <FiPlus className="mr-2" /> Canal do YouTube
+                </motion.button>
+              </div>
+            </div>
+            
             {/* Canais conectados */}
             {mockChannels.filter(channel => channel.platform === 'telegram').map((channel) => (
               <div key={channel.id} className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
@@ -1042,17 +1714,24 @@ export function MembershipSetupPage() {
                     {channel.isConnected ? 'Conectado' : 'Desconectado'}
                   </span>
                 </div>
+                <div className="flex flex-col space-y-2">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
-                  onClick={() => {
-                    setSelectedPlatform('telegram');
-                    setIsPrivateChannelModalOpen(true);
-                  }}
-                >
-                  {channel.isConnected ? 'Gerenciar' : 'Reconectar'}
+                    onClick={() => handleEditChannelClick(channel)}
+                  >
+                    Editar
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleDeleteChannelClick(channel.id)}
+                    className="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm"
+                  >
+                    Excluir
                 </motion.button>
+                </div>
               </div>
             ))}
 
@@ -1076,17 +1755,24 @@ export function MembershipSetupPage() {
                     {channel.isConnected ? 'Conectado' : 'Desconectado'}
                   </span>
                 </div>
+                <div className="flex flex-col space-y-2">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
-                  onClick={() => {
-                    setSelectedPlatform('whatsapp');
-                    setIsPrivateChannelModalOpen(true);
-                  }}
-                >
-                  {channel.isConnected ? 'Gerenciar' : 'Reconectar'}
+                    onClick={() => handleEditChannelClick(channel)}
+                  >
+                    Editar
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleDeleteChannelClick(channel.id)}
+                    className="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm"
+                  >
+                    Excluir
                 </motion.button>
+                </div>
               </div>
             ))}
 
@@ -1110,17 +1796,24 @@ export function MembershipSetupPage() {
                     {channel.isConnected ? 'Conectado' : 'Desconectado'}
                   </span>
                 </div>
+                <div className="flex flex-col space-y-2">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
-                  onClick={() => {
-                    setSelectedPlatform('youtube');
-                    setIsPrivateChannelModalOpen(true);
-                  }}
-                >
-                  {channel.isConnected ? 'Gerenciar' : 'Reconectar'}
+                    onClick={() => handleEditChannelClick(channel)}
+                  >
+                    Editar
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleDeleteChannelClick(channel.id)}
+                    className="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm"
+                  >
+                    Excluir
                 </motion.button>
+                </div>
               </div>
             ))}
           </div>
@@ -1133,9 +1826,83 @@ export function MembershipSetupPage() {
           platform={selectedPlatform}
               onSubmit={handleCreatePrivateGroup}
         />
+
+        {/* Edit Channel Modal */}
+        <PrivateChannelModal
+          isOpen={isEditChannelModalOpen}
+          onClose={() => setIsEditChannelModalOpen(false)}
+          platform={editingChannel?.platform || 'telegram'}
+          onSubmit={handleUpdateChannel}
+          initialData={editingChannel ? {
+            id: editingChannel.id.toString(),
+            name: editingChannel.name,
+            description: editingChannel.description || '',
+            type: editingChannel.platform.toUpperCase(),
+            inviteLink: editingChannel.inviteLink
+          } : undefined}
+          isEditing={true}
+        />
           </>
         )}
       </div>
+
+      {/* Modais */}
+      <CourseCreateSectionModal
+        isOpen={isCreateSectionModalOpen}
+        onClose={() => setIsCreateSectionModalOpen(false)}
+        onSuccess={handleModuleSuccess}
+        productId={productId || ''}
+      />
+      
+      <CourseCreateSectionModal
+        isOpen={isEditModuleModalOpen}
+        onClose={() => setIsEditModuleModalOpen(false)}
+        onSuccess={handleModuleSuccess}
+        productId={productId || ''}
+        initialData={editingModule ? {
+          id: editingModule.id,
+          title: editingModule.title,
+          description: editingModule.description,
+          image: editingModule.image
+        } : undefined}
+        isEditing={true}
+      />
+
+      <CourseCreateLessonModal
+        isOpen={isCreateLessonModalOpen}
+        onClose={() => setIsCreateLessonModalOpen(false)}
+        onSuccess={handleLessonSuccess}
+        moduleId={selectedModule?.id || ''}
+        initialData={editingLesson ? {
+          id: editingLesson.id,
+          title: editingLesson.title,
+          description: editingLesson.description,
+          videoUrl: editingLesson.videoUrl
+        } : undefined}
+        isEditing={!!editingLesson}
+      />
+      
+      <CreatePostModal
+        isOpen={isCreatePostModalOpen}
+        onClose={() => setIsCreatePostModalOpen(false)}
+        onSubmit={handleCreatePost}
+      />
+      
+      <PrivateChannelModal
+        isOpen={isPrivateChannelModalOpen}
+        onClose={() => setIsPrivateChannelModalOpen(false)}
+        platform={selectedPlatform}
+        onSubmit={handleCreatePrivateGroup}
+      />
+      
+      {productId && (
+        <ProductAccessModal
+          isOpen={isAccessModalOpen}
+          onClose={() => setIsAccessModalOpen(false)}
+          productId={productId}
+          productName={product?.name || 'Produto'}
+        />
+      )}
 
       {/* Users Modal */}
       <AnimatePresence>
@@ -1224,15 +1991,207 @@ export function MembershipSetupPage() {
         )}
       </AnimatePresence>
 
-      {/* Product Access Modal */}
-      {productId && (
-        <ProductAccessModal
-          isOpen={isAccessModalOpen}
-          onClose={() => setIsAccessModalOpen(false)}
-          productId={productId}
-          productName={product?.name || 'Produto'}
-        />
-      )}
+      {/* Modal de Confirmação de Exclusão */}
+        {deleteConfirmation.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex items-center text-red-500 mb-4">
+              <FiAlertCircle className="h-6 w-6 mr-2" />
+              <h3 className="text-lg font-medium">Confirmar exclusão</h3>
+                </div>
+            
+            <p className="text-gray-600 mb-4">
+              Tem certeza que deseja excluir {
+                deleteConfirmation.type === 'module' ? 'o módulo' : 
+                deleteConfirmation.type === 'lesson' ? 'a aula' : 'o post'
+              } <span className="font-medium">"{deleteConfirmation.title}"</span>?
+              <br />
+                  Esta ação não pode ser desfeita.
+                </p>
+            
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setDeleteConfirmation({...deleteConfirmation, isOpen: false})}
+                className="px-4 py-2 text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (deleteConfirmation.type === 'module') {
+                        handleDeleteModule(deleteConfirmation.id);
+                      } else if (deleteConfirmation.type === 'lesson') {
+                        handleDeleteLesson(deleteConfirmation.id, selectedModule?.id || '');
+                      } else if (deleteConfirmation.type === 'post') {
+                    handleDeletePost(Number(deleteConfirmation.id));
+                      } else if (deleteConfirmation.type === 'channel') {
+                        handleDeleteChannel(deleteConfirmation.id);
+                      }
+                  setDeleteConfirmation({...deleteConfirmation, isOpen: false});
+                    }}
+                className="px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+        </div>
+        )}
+
+      {/* Modal de detalhes do módulo */}
+      <AnimatePresence>
+        {isModuleDetailsModalOpen && selectedModule && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black cursor-pointer z-40"
+              onClick={() => setIsModuleDetailsModalOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed inset-8 bg-gray-800 rounded-xl shadow-xl overflow-hidden z-50 flex flex-col"
+            >
+              <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FiInfo className="w-5 h-5 text-gray-400" />
+                  <h2 className="text-xl font-medium text-white">{selectedModule.title}</h2>
+                </div>
+                <button
+                  onClick={() => setIsModuleDetailsModalOpen(false)}
+                  className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium text-white mb-2">Descrição</h3>
+                  <p className="text-gray-300">{selectedModule.description}</p>
+                </div>
+                
+                {selectedModule.image && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-medium text-white mb-2">Imagem do módulo</h3>
+                    <div className="relative h-40 rounded-lg overflow-hidden">
+                      <img 
+                        src={selectedModule.image} 
+                        alt={selectedModule.title} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-white">Aulas</h3>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setIsModuleDetailsModalOpen(false);
+                      setIsCreateLessonModalOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-500 transition-colors"
+                  >
+                    <FiPlus className="h-4 w-4" />
+                    Adicionar Aula
+                  </motion.button>
+                </div>
+
+                {selectedModule?.isLoadingLessons ? (
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <div className="w-12 h-12 border-4 border-gray-600 border-t-green-500 rounded-full animate-spin mb-4"></div>
+                    <p className="text-gray-400">Carregando aulas do módulo...</p>
+                  </div>
+                ) : (!selectedModule?.lessons || selectedModule.lessons.length === 0) ? (
+                  <div className="bg-gray-700/30 rounded-lg p-8 text-center">
+                    <div className="flex justify-center">
+                      <FiInfo className="h-10 w-10 text-gray-500" />
+                    </div>
+                    <h3 className="mt-2 text-md font-medium text-white">Nenhuma aula disponível</h3>
+                    <p className="mt-1 text-sm text-gray-400">
+                      Clique no botão "Adicionar Aula" para começar.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedModule.lessons.map((lesson, index) => (
+                      <div
+                        key={lesson.id}
+                        className="bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-start gap-3">
+                            <div className="bg-gray-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium text-white">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-white">{lesson.title}</h4>
+                              {lesson.description && (
+                                <p className="text-sm text-gray-400 mt-1">{lesson.description}</p>
+                              )}
+                              {lesson.duration && (
+                                <span className="text-xs text-gray-500 mt-2 block">
+                                  Duração: {lesson.duration}
+                                </span>
+                              )}
+                              {lesson.videoUrl && (
+                                <div className="mt-2 flex items-center gap-1 text-xs text-green-400">
+                                  <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                  Vídeo disponível
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleEditLessonClick(lesson, selectedModule.id)}
+                              className="p-1.5 text-gray-400 hover:text-green-400"
+                            >
+                              <FiEdit className="h-4 w-4" />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => setDeleteConfirmation({
+                                type: 'lesson',
+                                id: lesson.id,
+                                title: lesson.title,
+                                isOpen: true
+                              })}
+                              className="p-1.5 text-gray-400 hover:text-red-400"
+                            >
+                              <FiTrash2 className="h-4 w-4" />
+                            </motion.button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-4 border-t border-gray-700 flex justify-end">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsModuleDetailsModalOpen(false)}
+                  className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Fechar
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

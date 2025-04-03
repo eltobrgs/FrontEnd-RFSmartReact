@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
 
@@ -6,15 +6,33 @@ interface CreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit?: (postData: { title: string; description: string; space: string; tags: string[] }) => void;
+  initialValues?: { title: string; description: string; space: string; tags: string[] };
+  isEditing?: boolean;
 }
 
-export function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePostModalProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [space, setSpace] = useState('Geral');
-  const [tags, setTags] = useState<string[]>([]);
+export function CreatePostModal({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  initialValues, 
+  isEditing = false 
+}: CreatePostModalProps) {
+  const [title, setTitle] = useState(initialValues?.title || '');
+  const [description, setDescription] = useState(initialValues?.description || '');
+  const [space, setSpace] = useState(initialValues?.space || 'Geral');
+  const [tags, setTags] = useState<string[]>(initialValues?.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [error, setError] = useState('');
+  
+  // Atualizar os campos quando initialValues mudar
+  useEffect(() => {
+    if (initialValues) {
+      setTitle(initialValues.title || '');
+      setDescription(initialValues.description || '');
+      setSpace(initialValues.space || 'Geral');
+      setTags(initialValues.tags || []);
+    }
+  }, [initialValues]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,13 +51,15 @@ export function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePostModalPr
       });
     }
     
-    // Limpar o formulário
-    setTitle('');
-    setDescription('');
-    setSpace('Geral');
-    setTags([]);
-    setTagInput('');
-    setError('');
+    // Limpar o formulário apenas se não estiver editando
+    if (!isEditing) {
+      setTitle('');
+      setDescription('');
+      setSpace('Geral');
+      setTags([]);
+      setTagInput('');
+      setError('');
+    }
     
     onClose();
   };
@@ -73,7 +93,9 @@ export function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePostModalPr
             className="fixed inset-8 bg-gray-800 rounded-xl shadow-xl overflow-hidden z-50 flex flex-col"
           >
             <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-medium text-white">Criar Novo Post</h2>
+              <h2 className="text-xl font-medium text-white">
+                {isEditing ? 'Editar Post' : 'Criar Novo Post'}
+              </h2>
               <button
                 onClick={onClose}
                 className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
@@ -196,7 +218,7 @@ export function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePostModalPr
                     whileTap={{ scale: 0.95 }}
                     className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                   >
-                    Publicar Post
+                    {isEditing ? 'Salvar Alterações' : 'Publicar Post'}
                   </motion.button>
                 </div>
               </form>

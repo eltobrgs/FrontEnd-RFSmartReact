@@ -7,25 +7,44 @@ interface AddLessonModalProps {
   onClose: () => void;
   moduleTitle: string;
   onSubmit?: (lessonData: { title: string; description: string; videoUrl: string; materialUrl?: string }) => void;
+  initialValues?: { title: string; description: string; videoUrl: string; materialUrl?: string };
+  isEditing?: boolean;
 }
 
-export function AddLessonModal({ isOpen, onClose, moduleTitle, onSubmit }: AddLessonModalProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [materialUrl, setMaterialUrl] = useState('');
+export function AddLessonModal({ 
+  isOpen, 
+  onClose, 
+  moduleTitle, 
+  onSubmit, 
+  initialValues, 
+  isEditing = false 
+}: AddLessonModalProps) {
+  const [title, setTitle] = useState(initialValues?.title || '');
+  const [description, setDescription] = useState(initialValues?.description || '');
+  const [videoUrl, setVideoUrl] = useState(initialValues?.videoUrl || '');
+  const [materialUrl, setMaterialUrl] = useState(initialValues?.materialUrl || '');
   const [error, setError] = useState('');
 
-  // Limpar o formulário quando o modal é aberto
+  // Atualizar os campos quando initialValues mudar
   useEffect(() => {
-    if (isOpen) {
+    if (initialValues) {
+      setTitle(initialValues.title || '');
+      setDescription(initialValues.description || '');
+      setVideoUrl(initialValues.videoUrl || '');
+      setMaterialUrl(initialValues.materialUrl || '');
+    }
+  }, [initialValues]);
+
+  // Limpar o formulário quando o modal é aberto (apenas se não estiver editando)
+  useEffect(() => {
+    if (isOpen && !isEditing && !initialValues) {
       setTitle('');
       setDescription('');
       setVideoUrl('');
       setMaterialUrl('');
       setError('');
     }
-  }, [isOpen]);
+  }, [isOpen, isEditing, initialValues]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +54,7 @@ export function AddLessonModal({ isOpen, onClose, moduleTitle, onSubmit }: AddLe
       return;
     }
     
-    console.log('Enviando dados da aula:', { title, description, videoUrl, materialUrl });
+    console.log(`${isEditing ? 'Editando' : 'Enviando'} dados da aula:`, { title, description, videoUrl, materialUrl });
     
     if (onSubmit) {
       onSubmit({
@@ -68,7 +87,9 @@ export function AddLessonModal({ isOpen, onClose, moduleTitle, onSubmit }: AddLe
           >
             <div className="p-6 border-b border-gray-700 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-medium text-white">Adicionar Aula</h2>
+                <h2 className="text-xl font-medium text-white">
+                  {isEditing ? 'Editar Aula' : 'Adicionar Aula'}
+                </h2>
                 <p className="text-sm text-gray-400">Módulo: {moduleTitle}</p>
               </div>
               <button
@@ -152,7 +173,7 @@ export function AddLessonModal({ isOpen, onClose, moduleTitle, onSubmit }: AddLe
                     whileTap={{ scale: 0.95 }}
                     className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                   >
-                    Adicionar Aula
+                    {isEditing ? 'Salvar Alterações' : 'Adicionar Aula'}
                   </motion.button>
                 </div>
               </form>

@@ -48,7 +48,7 @@ export function MemberProductsPage() {
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`${API_BASE_URL}/products/my`, {
+        const response = await fetch(`${API_BASE_URL}/products`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

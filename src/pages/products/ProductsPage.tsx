@@ -53,7 +53,7 @@ export function ProductsPage() {
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`${API_BASE_URL}/products/my`, {
+        const response = await fetch(`${API_BASE_URL}/products`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -64,10 +64,12 @@ export function ProductsPage() {
         }
         
         const data = await response.json();
-        setProducts(data);
+        // Filtrar apenas produtos criados pelo usuário
+        const createdProducts = data.filter((product: Product) => product.isCreator === true);
+        setProducts(createdProducts);
         
         // Extrair categorias únicas
-        const uniqueCategories = ['Todas', ...new Set(data.map((product: Product) => product.category))];
+        const uniqueCategories = ['Todas', ...new Set(createdProducts.map((product: Product) => product.category))];
         setCategories(uniqueCategories as string[]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao carregar produtos');
@@ -81,14 +83,13 @@ export function ProductsPage() {
   }, []);
 
   const filteredProducts = products.filter(product => {
-    // Filtrar apenas produtos criados pelo usuário
-    const isCreatedByUser = product.isCreator === true;
+    // Filtrar apenas produtos criados pelo usuário (remover esta condição)
     
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Todas' || product.category === selectedCategory;
     
-    return isCreatedByUser && matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory;
   });
 
   const handleDeleteProduct = async (productId: string) => {

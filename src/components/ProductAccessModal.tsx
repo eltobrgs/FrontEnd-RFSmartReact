@@ -45,8 +45,8 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
 
         console.log('Buscando usuários sem acesso para o produto:', productId);
         
-        // Buscar usuários sem acesso
-        const response = await fetch(`${API_BASE_URL}/products/${productId}/non-users`, {
+        // Buscar usuários sem acesso - CORRIGIDO: URL correta é nonusers (sem hífen)
+        const response = await fetch(`${API_BASE_URL}/products/${productId}/nonusers`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -95,6 +95,7 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
   const handleGrantAccess = async (userId: string) => {
     try {
       setGrantingAccess(userId);
+      setError(''); // Limpar erros anteriores
       
       const token = localStorage.getItem('token');
       if (!token) {
@@ -103,6 +104,8 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
       }
 
       console.log('Concedendo acesso para o usuário:', userId, 'no produto:', productId);
+      console.log('API URL:', `${API_BASE_URL}/products/${productId}/access/${userId}`);
+      console.log('Token de autenticação presente:', !!token);
       
       const response = await fetch(`${API_BASE_URL}/products/${productId}/access/${userId}`, {
         method: 'POST',
@@ -112,13 +115,17 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
         }
       });
 
+      const responseText = await response.text();
+      console.log('Resposta bruta da API:', responseText);
+      
+      const responseData = responseText ? JSON.parse(responseText) : {};
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Resposta da API (grant access):', response.status, errorData);
-        throw new Error(`Falha ao conceder acesso: ${response.status} ${errorData.message || ''}`);
+        console.error('Erro na resposta da API:', response.status, responseData);
+        throw new Error(`Falha ao conceder acesso: ${response.status} - ${responseData.message || 'Erro desconhecido'}`);
       }
 
-      console.log('Acesso concedido com sucesso');
+      console.log('Acesso concedido com sucesso, resposta:', responseData);
       
       // Atualizar listas de usuários
       setUsers(users.filter(user => user.id !== userId));
@@ -134,10 +141,14 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
         const accessData = await accessResponse.json();
         console.log('Usuários com acesso atualizados:', accessData.length);
         setAccessUsers(accessData);
+      } else {
+        console.warn('Não foi possível atualizar lista de usuários com acesso');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao conceder acesso');
-      console.error('Erro ao conceder acesso:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao conceder acesso';
+      setError(errorMessage);
+      console.error('Erro detalhado ao conceder acesso:', err);
+      alert(`Falha ao conceder acesso: ${errorMessage}`);
     } finally {
       setGrantingAccess(null);
     }
@@ -147,6 +158,7 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
   const handleRevokeAccess = async (userId: string) => {
     try {
       setGrantingAccess(userId);
+      setError(''); // Limpar erros anteriores
       
       const token = localStorage.getItem('token');
       if (!token) {
@@ -155,6 +167,8 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
       }
 
       console.log('Revogando acesso para o usuário:', userId, 'no produto:', productId);
+      console.log('API URL:', `${API_BASE_URL}/products/${productId}/access/${userId}`);
+      console.log('Token de autenticação presente:', !!token);
       
       const response = await fetch(`${API_BASE_URL}/products/${productId}/access/${userId}`, {
         method: 'DELETE',
@@ -163,19 +177,23 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
         }
       });
 
+      const responseText = await response.text();
+      console.log('Resposta bruta da API:', responseText);
+      
+      const responseData = responseText ? JSON.parse(responseText) : {};
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Resposta da API (revoke access):', response.status, errorData);
-        throw new Error(`Falha ao revogar acesso: ${response.status} ${errorData.message || ''}`);
+        console.error('Erro na resposta da API (revoke):', response.status, responseData);
+        throw new Error(`Falha ao revogar acesso: ${response.status} - ${responseData.message || 'Erro desconhecido'}`);
       }
 
-      console.log('Acesso revogado com sucesso');
+      console.log('Acesso revogado com sucesso, resposta:', responseData);
       
       // Atualizar listas de usuários
       setAccessUsers(accessUsers.filter(user => user.id !== userId));
       
-      // Buscar usuários sem acesso novamente
-      const usersResponse = await fetch(`${API_BASE_URL}/products/${productId}/non-users`, {
+      // Buscar usuários sem acesso novamente - CORRIGIDO: URL correta é nonusers (sem hífen)
+      const usersResponse = await fetch(`${API_BASE_URL}/products/${productId}/nonusers`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -185,10 +203,14 @@ export function ProductAccessModal({ isOpen, onClose, productId, productName }: 
         const usersData = await usersResponse.json();
         console.log('Usuários sem acesso atualizados:', usersData.length);
         setUsers(usersData);
+      } else {
+        console.warn('Não foi possível atualizar lista de usuários sem acesso');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao revogar acesso');
-      console.error('Erro ao revogar acesso:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao revogar acesso';
+      setError(errorMessage);
+      console.error('Erro detalhado ao revogar acesso:', err);
+      alert(`Falha ao revogar acesso: ${errorMessage}`);
     } finally {
       setGrantingAccess(null);
     }

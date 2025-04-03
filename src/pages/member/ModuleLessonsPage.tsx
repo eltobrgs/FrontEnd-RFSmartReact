@@ -51,6 +51,8 @@ export function ModuleLessonsPage() {
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | ''}>({message: '', type: ''});
   // Estado para controlar a visibilidade da sidebar em telas menores
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Estado para controlar o carregamento do vídeo
+  const [videoLoading, setVideoLoading] = useState(true);
 
   // Função para alternar a visibilidade da sidebar
   const toggleSidebar = () => {
@@ -384,7 +386,8 @@ export function ModuleLessonsPage() {
       }
       
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}`;
+        // Adicionando parâmetros para melhor UI e controle
+        return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1`;
       }
     }
     
@@ -392,7 +395,8 @@ export function ModuleLessonsPage() {
     if (url.includes('vimeo.com')) {
       const vimeoId = url.split('vimeo.com/')[1].split('?')[0];
       if (vimeoId) {
-        return `https://player.vimeo.com/video/${vimeoId}`;
+        // Adicionando parâmetros para melhor UI
+        return `https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0`;
       }
     }
     
@@ -404,6 +408,18 @@ export function ModuleLessonsPage() {
     // Caso contrário, retornar a URL original
     return url;
   };
+
+  // Função para lidar com o carregamento do vídeo
+  const handleVideoLoad = () => {
+    setVideoLoading(false);
+  };
+
+  // Função para reiniciar o estado de carregamento do vídeo quando mudar de aula
+  useEffect(() => {
+    if (selectedLesson?.videoUrl) {
+      setVideoLoading(true);
+    }
+  }, [selectedLesson?.videoUrl]);
 
   // Para o botão de voltar:
   const handleBackClick = () => {
@@ -651,16 +667,59 @@ export function ModuleLessonsPage() {
                   </div>
 
                   {selectedLesson.videoUrl && (
-                    <div className="aspect-video mb-6 bg-black rounded-lg overflow-hidden shadow-xl">
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="mb-6 relative"
+                    >
+                      <div className="aspect-video overflow-hidden relative rounded-xl bg-gray-800 shadow-2xl ring-1 ring-gray-700">
+                        {/* Overlay de carregamento */}
+                        <AnimatePresence>
+                          {videoLoading && (
+                            <motion.div 
+                              initial={{ opacity: 1 }} 
+                              exit={{ opacity: 0 }}
+                              className="absolute inset-0 bg-gray-900/80 flex flex-col items-center justify-center z-10"
+                            >
+                              <motion.div 
+                                animate={{ rotate: 360 }}
+                                transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                                className="w-12 h-12 rounded-full border-4 border-gray-500 border-t-green-400 mb-4"
+                              />
+                              <p className="text-gray-300 font-medium">Carregando vídeo...</p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        
+                        {/* Player de vídeo responsivo */}
+                        <div className="relative w-full h-full">
                       <iframe
                         ref={videoRef}
                         src={formatVideoUrl(selectedLesson.videoUrl)}
                         title={selectedLesson.title}
-                        className="w-full h-full"
+                            className="w-full h-full absolute inset-0"
+                            onLoad={handleVideoLoad}
                         allowFullScreen
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            style={{ borderRadius: "0.75rem" }}
                       ></iframe>
                     </div>
+                      </div>
+                      
+                      {/* Informações do vídeo */}
+                      <div className="flex justify-between items-center mt-3 px-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-400 flex items-center">
+                            <FiPlay className="w-3 h-3 mr-1" />
+                            {selectedLesson.duration || "Vídeo"}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Arraste para reposicionar • Clique duplo para tela cheia
+                        </div>
+                      </div>
+                    </motion.div>
                   )}
                   
                   <div className="flex flex-wrap gap-4 mb-8">

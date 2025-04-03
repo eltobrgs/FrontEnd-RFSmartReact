@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Icons
 import {FiInfo, FiArrowLeft, FiClock, FiBook, FiUser, FiStar, FiMessageSquare, FiHeart, FiShare2, FiX } from 'react-icons/fi';
 import { FaTelegram, FaWhatsapp, FaYoutube } from 'react-icons/fa';
+import { BookOpenIcon, UserGroupIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 
 // Importando a variável API_BASE_URL
 import { API_BASE_URL } from '../../variables/api';
@@ -88,46 +89,72 @@ export function MemberContentPage() {
   const navigate = useNavigate();
   const [showInfo, setShowInfo] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [product, setProduct] = useState<Product | null>(null);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'modules' | 'community' | 'groups'>('modules');
 
   // Buscar dados do produto
   useEffect(() => {
     const fetchProductData = async () => {
-      if (!productId) return;
-      
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        if (!productId) {
+          setLoading(false);
+          return;
+        }
+        
+        const productResponse = await fetch(`${API_BASE_URL}/products/${productId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
-        if (!response.ok) {
-          throw new Error('Falha ao carregar detalhes do produto');
+        if (!productResponse.ok) {
+          throw new Error('Falha ao obter dados do produto');
         }
         
-        const data = await response.json();
+        const productData = await productResponse.json();
+        
+        // Adicionar logs para depuração
+        console.log('=== DEBUG PRODUCT DATA ===');
+        console.log(`Produto ID: ${productData.id}, Nome: ${productData.name}, Tipo de Acesso: ${productData.accessType}`);
+        console.log(`Posts: ${productData.posts?.length || 0}, Grupos Privados: ${productData.privateGroups?.length || 0}, Módulos: ${productData.modules?.length || 0}`);
+        
+        if (productData.posts) {
+          console.log('Posts:', productData.posts);
+        } else {
+          console.log('Posts: nenhum post encontrado');
+        }
+        
+        if (productData.privateGroups) {
+          console.log('Grupos Privados:', productData.privateGroups);
+        } else {
+          console.log('Grupos Privados: nenhum grupo encontrado');
+        }
+        console.log('=== FIM DEBUG ===');
         
         // Verificar se o usuário tem acesso
-        if (!data.hasAccess) {
+        if (!productData.hasAccess) {
           navigate('/member/products');
           return;
         }
         
-        setProduct(data);
+        setProduct(productData);
         
         // Definir a aba ativa com base no tipo de acesso
-        if (data.accessType === 'COMMUNITY') {
+        if (productData.accessType === 'COMMUNITY') {
           setActiveTab('community');
-        } else if (data.modules && data.modules.length > 0) {
+        } else if (productData.modules && productData.modules.length > 0) {
           setActiveTab('modules');
-        } else if (data.privateGroups && data.privateGroups.length > 0) {
+        } else if (productData.privateGroups && productData.privateGroups.length > 0) {
           setActiveTab('groups');
         }
       } catch (err) {
@@ -335,34 +362,58 @@ export function MemberContentPage() {
         )}
       </AnimatePresence>
 
-      {/* Content Tabs */}
-      <div className="bg-gray-900 py-6">
+      {/* Tabs */}
+      <div className="bg-gray-900 py-4 border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-1 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-            {product.accessType !== 'COMMUNITY' && product.modules && product.modules.length > 0 && (
+          <div className="flex space-x-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+            {/* Mostrar aba de módulos se o produto tiver módulos */}
+            {product?.modules && product.modules.length > 0 && (
               <button
+                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                  activeTab === 'modules' 
+                    ? 'bg-gray-800 text-blue-400 font-medium' 
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                }`}
                 onClick={() => setActiveTab('modules')}
-                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${activeTab === 'modules' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
               >
-                Módulos
+                <span className="flex items-center">
+                  <BookOpenIcon className="w-4 h-4 mr-1" />
+                  Módulos
+                </span>
               </button>
             )}
             
-            {product.accessType !== 'COURSE' && product.posts && product.posts.length > 0 && (
+            {/* Mostrar aba de comunidade se o produto for do tipo COMMUNITY ou BOTH */}
+            {(product?.accessType === 'COMMUNITY' || product?.accessType === 'BOTH') && (
               <button
+                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                  activeTab === 'community' 
+                    ? 'bg-gray-800 text-blue-400 font-medium' 
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                }`}
                 onClick={() => setActiveTab('community')}
-                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${activeTab === 'community' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
               >
-                Comunidade
+                <span className="flex items-center">
+                  <UserGroupIcon className="w-4 h-4 mr-1" />
+                  Comunidade
+                </span>
               </button>
             )}
             
-            {product.accessType !== 'COURSE' && product.privateGroups && product.privateGroups.length > 0 && (
+            {/* Mostrar aba de grupos privados se o produto for do tipo COMMUNITY ou BOTH */}
+            {(product?.accessType === 'COMMUNITY' || product?.accessType === 'BOTH') && (
               <button
+                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                  activeTab === 'groups' 
+                    ? 'bg-gray-800 text-blue-400 font-medium' 
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                }`}
                 onClick={() => setActiveTab('groups')}
-                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${activeTab === 'groups' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
               >
-                Grupos Privados
+                <span className="flex items-center">
+                  <LockClosedIcon className="w-4 h-4 mr-1" />
+                  Grupos Privados
+                </span>
               </button>
             )}
           </div>

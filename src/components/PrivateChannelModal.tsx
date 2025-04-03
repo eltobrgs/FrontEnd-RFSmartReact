@@ -1,18 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX } from 'react-icons/fi';
+import { FiX, FiUsers, FiLink } from 'react-icons/fi';
 
 interface PrivateChannelModalProps {
   isOpen: boolean;
   onClose: () => void;
-  platform: 'telegram' | 'whatsapp' | 'youtube';
-  onSubmit?: (groupData: { name: string; description: string; type: string }) => void;
+  platform: 'telegram' | 'whatsapp' | 'youtube' | 'group';
+  onSubmit?: (groupData: { name: string; description: string; type: string; inviteLink?: string }) => void;
+  initialData?: {
+    id: string;
+    name: string;
+    description: string;
+    type: string;
+    inviteLink?: string;
+  };
+  isEditing?: boolean;
 }
 
-export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: PrivateChannelModalProps) {
+export function PrivateChannelModal({ 
+  isOpen, 
+  onClose, 
+  platform, 
+  onSubmit,
+  initialData,
+  isEditing = false 
+}: PrivateChannelModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [inviteLink, setInviteLink] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen && initialData) {
+      console.log('[DEBUG PrivateChannelModal] Recebendo dados iniciais:', initialData);
+      setName(initialData.name || '');
+      setDescription(initialData.description || '');
+      setInviteLink(initialData.inviteLink || '');
+    } else if (isOpen) {
+      // Reset form when opening for new creation
+      console.log('[DEBUG PrivateChannelModal] Abrindo modal para criação de novo grupo');
+      setName('');
+      setDescription('');
+      setInviteLink('');
+      setError('');
+    }
+  }, [isOpen, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,17 +55,24 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
     }
     
     if (onSubmit) {
-      onSubmit({
+      const groupData = {
         name,
         description,
-        type: platform.toUpperCase()
-      });
+        type: platform === 'group' ? 'GROUP' : platform.toUpperCase(),
+        inviteLink: inviteLink || undefined
+      };
+      
+      console.log('[DEBUG PrivateChannelModal] Enviando dados do grupo:', groupData);
+      onSubmit(groupData);
     }
     
-    // Limpar o formulário
-    setName('');
-    setDescription('');
-    setError('');
+    // Limpar o formulário apenas se não estiver editando
+    if (!isEditing) {
+      setName('');
+      setDescription('');
+      setInviteLink('');
+      setError('');
+    }
     
     onClose();
   };
@@ -50,6 +89,10 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
     youtube: {
       title: 'YouTube',
       description: 'Conecte seu canal do YouTube para compartilhar vídeos exclusivos com seus membros.'
+    },
+    group: {
+      title: 'Grupo',
+      description: 'Crie um grupo de discussão na plataforma para interação entre seus membros.'
     }
   };
 
@@ -71,7 +114,16 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
             className="fixed inset-8 bg-gray-800 rounded-xl shadow-xl overflow-hidden z-50 flex flex-col"
           >
             <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-medium text-white">Conectar {platformInfo[platform].title}</h2>
+              <div className="flex items-center gap-2">
+                {platform === 'group' && <FiUsers className="w-5 h-5 text-green-400" />}
+                <h2 className="text-xl font-medium text-white">
+                  {isEditing 
+                    ? `Editar ${platform === 'group' ? 'Grupo' : `Canal ${platformInfo[platform].title}`}`
+                    : platform === 'group' 
+                      ? 'Criar Novo Grupo' 
+                      : `Conectar ${platformInfo[platform].title}`}
+                </h2>
+              </div>
               <button
                 onClick={onClose}
                 className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
@@ -92,7 +144,7 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
-                    Nome do Canal *
+                    Nome do {platform === 'group' ? 'Grupo' : 'Canal'} *
                   </label>
                   <input
                     type="text"
@@ -100,7 +152,7 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
-                    placeholder={`Ex: Canal ${platformInfo[platform].title} Exclusivo`}
+                    placeholder={`Ex: ${platform === 'group' ? 'Grupo de Discussão Principal' : `Canal ${platformInfo[platform].title} Exclusivo`}`}
                     required
                   />
                 </div>
@@ -115,9 +167,33 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
-                    placeholder="Descreva o propósito deste canal"
+                    placeholder={`Descreva o propósito deste ${platform === 'group' ? 'grupo' : 'canal'}`}
                     required
                   />
+                </div>
+
+                <div>
+                  <label htmlFor="inviteLink" className="block text-sm font-medium text-gray-300 mb-1">
+                    Link de convite
+                  </label>
+                  <div className="flex items-center">
+                    <div className="flex-1 relative">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                        <FiLink className="w-4 h-4" />
+                      </span>
+                      <input
+                        type="url"
+                        id="inviteLink"
+                        value={inviteLink}
+                        onChange={(e) => setInviteLink(e.target.value)}
+                        className="w-full pl-10 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
+                        placeholder={`https://${platform}.com/...`}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Insira o link de convite completo para seu {platform === 'group' ? 'grupo' : 'canal'}
+                  </p>
                 </div>
                 
                 <div className="pt-4 flex justify-end">
@@ -127,7 +203,7 @@ export function PrivateChannelModal({ isOpen, onClose, platform, onSubmit }: Pri
                     whileTap={{ scale: 0.95 }}
                     className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                   >
-                    Conectar Canal
+                    {isEditing ? 'Salvar alterações' : platform === 'group' ? 'Criar Grupo' : 'Conectar Canal'}
                   </motion.button>
                 </div>
               </form>

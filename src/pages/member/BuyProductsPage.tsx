@@ -52,7 +52,7 @@ export function BuyProductsPage() {
       try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`${API_BASE_URL}/products/available-to-buy`, {
+        const response = await fetch(`${API_BASE_URL}/products/marketplace`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
